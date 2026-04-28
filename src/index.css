@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    background-color: #FDF8F3;
+    font-family: 'Inter', sans-serif;
+    color: #1c1917;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3, h4 {
+    font-family: 'Playfair Display', serif;
+  }
+}
+
+@layer components {
+  .btn-orange {
+    @apply bg-orange text-white font-inter font-medium px-6 py-3 rounded-full
+           hover:bg-orange-dark transition-all duration-200 active:scale-95
+           focus:outline-none focus:ring-2 focus:ring-orange focus:ring-offset-2;
+  }
+  .btn-outline {
+    @apply border-2 border-orange text-orange font-inter font-medium px-6 py-3 rounded-full
+           hover:bg-orange hover:text-white transition-all duration-200 active:scale-95
+           focus:outline-none focus:ring-2 focus:ring-orange focus:ring-offset-2;
+  }
+  .card {
+    @apply bg-white rounded-xl border border-border shadow-sm hover:shadow-md transition-all duration-300
+           hover:-translate-y-1;
+  }
+  .input-base {
+    @apply w-full border border-border rounded-lg px-4 py-2.5
+           bg-white font-inter text-sm focus:outline-none focus:ring-2
+           focus:ring-orange focus:border-transparent placeholder:text-gray-400;
+    color: #1c1917;
+  }
+  .badge-etiqueta {
+    @apply text-xs font-inter font-semibold px-2.5 py-1 rounded-full;
+  }
+}
+
+/* Animación carrusel hero */
+@keyframes heroFadeIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Scrollbar sutil */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #FDF8F3; }
+::-webkit-scrollbar-thumb { background: #F5821F; border-radius: 3px; }
