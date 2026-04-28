@@ -22,8 +22,20 @@ export default function Pedidos() {
   const [filtroEstado, setFiltroEstado] = useState('')
   const { pedidos, cargando, cambiarEstado } = usePedidos(filtroEstado || null)
 
+  const fmt = (n) => n ? new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n) : ''
+
   const contactarWA = (pedido) => {
-    const texto = `Hola ${pedido.cliente_nombre}! Te contactamos de Fanática del Calzado por tu pedido de *${pedido.producto_nombre}* talle *${pedido.talle}*.`
+    const precio = pedido.producto_precio ? ` · ${fmt(pedido.producto_precio)}` : ''
+    const cant   = pedido.cantidad > 1 ? ` (x${pedido.cantidad})` : ''
+    const texto = [
+      `Hola ${pedido.cliente_nombre}! 👋 Te escribimos de *Fanática del Calzado*.`,
+      ``,
+      `Recibimos tu pedido:`,
+      `🛍️ *${pedido.producto_nombre}*${cant}`,
+      `📏 Talle: *${pedido.talle}*${precio}`,
+      ``,
+      `¿Confirmamos el pedido?`,
+    ].join('\n')
     window.open(`https://wa.me/${pedido.cliente_telefono?.replace(/\D/g,'')}?text=${encodeURIComponent(texto)}`, '_blank', 'noopener,noreferrer')
   }
 
@@ -78,8 +90,26 @@ export default function Pedidos() {
                 {pedidos.map(p => (
                   <tr key={p.id} className="hover:bg-nude/20 transition-colors">
                     <td className="px-4 py-3 font-dm text-xs text-negro/50 whitespace-nowrap">{formatFecha(p.created_at)}</td>
-                    <td className="px-4 py-3 font-dm text-sm text-negro font-medium max-w-[160px] truncate">{p.producto_nombre}</td>
-                    <td className="px-4 py-3 font-dm text-sm text-negro/60">{p.talle}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        {p.producto_imagen ? (
+                          <img src={p.producto_imagen} alt={p.producto_nombre}
+                            className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                        ) : (
+                          <div className="w-10 h-10 rounded-lg bg-nude flex items-center justify-center text-lg flex-shrink-0">👠</div>
+                        )}
+                        <div>
+                          <p className="font-dm text-sm text-negro font-medium leading-tight">{p.producto_nombre}</p>
+                          <p className="font-dm text-xs text-negro/40 leading-tight">
+                            {[p.categoria, p.producto_precio ? fmt(p.producto_precio) : null].filter(Boolean).join(' · ')}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-dm text-sm font-semibold text-negro/80">{p.talle}</span>
+                      {p.cantidad > 1 && <span className="font-dm text-xs text-negro/40 ml-1">x{p.cantidad}</span>}
+                    </td>
                     <td className="px-4 py-3 font-dm text-sm text-negro">{p.cliente_nombre}</td>
                     <td className="px-4 py-3 font-dm text-sm text-negro/60">{p.cliente_telefono}</td>
                     <td className="px-4 py-3">

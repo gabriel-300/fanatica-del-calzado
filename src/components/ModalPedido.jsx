@@ -24,11 +24,22 @@ export default function ModalPedido({ producto, talle, cantidad = 1, onCerrar })
       await crearPedido({
         producto,
         talle,
-        cliente: { nombre: nombre.trim(), telefono: telefono.trim() },
+        cliente: { nombre: nombre.trim(), telefono: telefono.trim(), cantidad },
       })
 
-      const cantTexto = cantidad > 1 ? `${cantidad}x ` : ''
-      const texto = `Hola! Quiero pedir *${cantTexto}${producto.nombre}* talle *${talle}*. Mi nombre es ${nombre.trim()}.`
+      const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
+      const cantTexto = cantidad > 1 ? ` (x${cantidad})` : ''
+      const texto = [
+        `Hola! 👋 Quisiera hacer el siguiente pedido:`,
+        ``,
+        `🛍️ *${producto.nombre}*${cantTexto}`,
+        `📏 Talle: *${talle}*`,
+        producto.precio ? `💰 Precio: ${fmt(producto.precio)}` : null,
+        producto.categoria ? `🏷️ Categoría: ${producto.categoria}` : null,
+        ``,
+        `👤 Nombre: ${nombre.trim()}`,
+        `📱 Teléfono: ${telefono.trim()}`,
+      ].filter(l => l !== null).join('\n')
       const url = `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(texto)}`
 
       toast.success('¡Pedido registrado! Abriendo WhatsApp...')

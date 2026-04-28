@@ -58,10 +58,14 @@ export async function crearPedido({ producto, talle, cliente }) {
   const { error } = await supabase
     .from('pedidos')
     .insert([{
-      producto_id: producto.id,
+      producto_id:     producto.id,
       producto_nombre: producto.nombre,
+      producto_imagen: producto.imagen_url || null,
+      producto_precio: producto.precio    || null,
+      categoria:       producto.categoria || null,
       talle,
-      cliente_nombre: cliente.nombre,
+      cantidad:        cliente.cantidad   || 1,
+      cliente_nombre:  cliente.nombre,
       cliente_telefono: cliente.telefono,
     }])
 
