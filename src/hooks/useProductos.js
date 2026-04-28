@@ -115,7 +115,20 @@ export function useProductosAdmin() {
     }
   }
 
-  return { productos, cargando, crearProducto, editarProducto, toggleActivo, recargar: cargar }
+  const eliminarProducto = async (id) => {
+    try {
+      // Eliminar stock primero (FK constraint)
+      await supabase.from('stock').delete().eq('producto_id', id)
+      const { error } = await supabase.from('productos').delete().eq('id', id)
+      if (error) throw error
+      toast.success('Producto eliminado')
+      await cargar()
+    } catch (e) {
+      toast.error('Error eliminando producto: ' + e.message)
+    }
+  }
+
+  return { productos, cargando, crearProducto, editarProducto, eliminarProducto, toggleActivo, recargar: cargar }
 }
 
 // Hace upsert del stock de todos los talles de un producto

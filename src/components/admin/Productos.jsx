@@ -10,6 +10,7 @@ const TALLES_ESTANDAR = ['35', '36', '37', '38', '39', '40', '41']
 const VACIO = {
   nombre: '', descripcion: '', categoria: '',
   precio: '', imagenes: [], etiqueta: '', activo: true,
+  precio_costo: null, costo_reales: null, cotizacion: null, flete: null, ganancia_pct: null,
 }
 
 function formatPrecio(p) {
@@ -212,8 +213,153 @@ function StockTalles({ stockForm, setStockForm }) {
   )
 }
 
+const CALC_KEY = 'fanatica_calc'
+
+function CalculadorPrecio({ onAplicar, initialValues = {} }) {
+  const saved = (() => { try { return JSON.parse(localStorage.getItem(CALC_KEY)) || {} } catch { return {} } })()
+
+  const [abierto,     setAbierto]     = useState(false)
+  const [reales,      setReales]      = useState(initialValues.costo_reales ?? '')
+  const [cotizacion,  setCotizacion]  = useState(initialValues.cotizacion  ?? saved.cotizacion  ?? 300)
+  const [flete,       setFlete]       = useState(initialValues.flete       ?? saved.flete       ?? 3500)
+  const [ganancia,    setGanancia]    = useState(initialValues.ganancia_pct ?? saved.ganancia    ?? 30)
+
+  // Persiste configuración al cambiar
+  const guardar = (key, val) => {
+    const cfg = (() => { try { return JSON.parse(localStorage.getItem(CALC_KEY)) || {} } catch { return {} } })()
+    localStorage.setItem(CALC_KEY, JSON.stringify({ ...cfg, [key]: val }))
+  }
+
+  const costoARS    = (parseFloat(reales) || 0) * (parseFloat(cotizacion) || 0)
+  const costoTotal  = costoARS + (parseFloat(flete) || 0)
+  const precioFinal = costoTotal * (1 + (parseFloat(ganancia) || 0) / 100)
+  const listo       = reales > 0 && precioFinal > 0
+
+  const fmt = (n) => new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(n)
+
+  return (
+    <div className="mt-1">
+      <button
+        type="button"
+        onClick={() => setAbierto(a => !a)}
+        className="flex items-center gap-1.5 font-inter text-xs text-orange hover:text-orange-dark transition-colors"
+      >
+        <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M1 1l5 5-5 5M7 6h5" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+        {abierto ? 'Ocultar calculadora' : 'Calcular desde R$ (reales)'}
+      </button>
+
+      {abierto && (
+        <div className="mt-2 bg-orange-light border border-orange/20 rounded-xl p-4 space-y-3">
+          <p className="font-inter text-xs font-semibold text-stone-600 uppercase tracking-wider">
+            Calculadora de precio
+          </p>
+
+          {/* Fila 1: reales + cotización */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block font-inter text-xs text-stone-500 mb-1">Precio en R$</label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 font-inter text-xs text-stone-400">R$</span>
+                <input
+                  type="number" min="0" step="0.01"
+                  value={reales}
+                  onChange={e => setReales(e.target.value)}
+                  className="input-base pl-8 py-2 text-sm"
+                  placeholder="50"
+                  autoFocus
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block font-inter text-xs text-stone-500 mb-1">Cotización (ARS/R$)</label>
+              <input
+                type="number" min="0" step="1"
+                value={cotizacion}
+                onChange={e => { setCotizacion(e.target.value); guardar('cotizacion', e.target.value) }}
+                className="input-base py-2 text-sm"
+                placeholder="300"
+              />
+            </div>
+          </div>
+
+          {/* Fila 2: flete + ganancia */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="block font-inter text-xs text-stone-500 mb-1">Flete (ARS)</label>
+              <input
+                type="number" min="0" step="100"
+                value={flete}
+                onChange={e => { setFlete(e.target.value); guardar('flete', e.target.value) }}
+                className="input-base py-2 text-sm"
+                placeholder="3500"
+              />
+            </div>
+            <div>
+              <label className="block font-inter text-xs text-stone-500 mb-1">Ganancia (%)</label>
+              <div className="relative">
+                <input
+                  type="number" min="0" step="1"
+                  value={ganancia}
+                  onChange={e => { setGanancia(e.target.value); guardar('ganancia', e.target.value) }}
+                  className="input-base py-2 text-sm pr-7"
+                  placeholder="30"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 font-inter text-xs text-stone-400">%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Resultado */}
+          {reales > 0 && (
+            <div className="bg-white rounded-lg p-3 border border-orange/20 space-y-1">
+              <div className="flex justify-between font-inter text-xs text-stone-500">
+                <span>Conversión (R${reales} × {cotizacion})</span>
+                <span>{fmt(costoARS)}</span>
+              </div>
+              <div className="flex justify-between font-inter text-xs text-stone-500">
+                <span>+ Flete</span>
+                <span>{fmt(parseFloat(flete) || 0)}</span>
+              </div>
+              <div className="flex justify-between font-inter text-xs text-stone-500 border-t border-border pt-1">
+                <span>Costo total</span>
+                <span className="font-semibold text-stone-700">{fmt(costoTotal)}</span>
+              </div>
+              <div className="flex justify-between font-inter text-sm font-bold text-orange border-t border-border pt-1">
+                <span>Precio final (+{ganancia}%)</span>
+                <span>{fmt(precioFinal)}</span>
+              </div>
+            </div>
+          )}
+
+          {listo && (
+            <button
+              type="button"
+              onClick={() => {
+                onAplicar({
+                  precio:       Math.round(precioFinal),
+                  precio_costo: Math.round(costoTotal),
+                  costo_reales: parseFloat(reales),
+                  cotizacion:   parseFloat(cotizacion),
+                  flete:        parseFloat(flete),
+                  ganancia_pct: parseFloat(ganancia),
+                })
+                setAbierto(false)
+              }}
+              className="w-full bg-orange hover:bg-orange-dark text-white font-inter font-semibold text-sm py-2.5 rounded-lg transition-colors"
+            >
+              Aplicar {fmt(Math.round(precioFinal))}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Productos() {
-  const { productos, cargando, crearProducto, editarProducto, toggleActivo } = useProductosAdmin()
+  const { productos, cargando, crearProducto, editarProducto, eliminarProducto, toggleActivo } = useProductosAdmin()
   const { categorias, agregarCategoria } = useCategorias()
   const [modalAbierto, setModalAbierto] = useState(false)
   const [productoEditando, setProductoEditando] = useState(null)
@@ -222,6 +368,7 @@ export default function Productos() {
   const [guardando, setGuardando] = useState(false)
   const [nuevaCat, setNuevaCat] = useState('')
   const [mostrarNuevaCat, setMostrarNuevaCat] = useState(false)
+  const [confirmEliminar, setConfirmEliminar] = useState(null)
 
   const handleAgregarCategoria = async () => {
     const ok = await agregarCategoria(nuevaCat)
@@ -257,6 +404,11 @@ export default function Productos() {
       imagenes: imgs,
       etiqueta: p.etiqueta || '',
       activo: p.activo ?? true,
+      precio_costo: p.precio_costo ?? null,
+      costo_reales: p.costo_reales ?? null,
+      cotizacion:   p.cotizacion   ?? null,
+      flete:        p.flete        ?? null,
+      ganancia_pct: p.ganancia_pct ?? null,
     })
     const stockActual = {}
     ;(p.stock || []).forEach(s => { stockActual[s.talle] = s.cantidad })
@@ -275,8 +427,13 @@ export default function Productos() {
       precio: parseFloat(form.precio) || 0,
       etiqueta: form.etiqueta || null,
       activo: form.activo,
-      imagen_url: form.imagenes[0] || null,    // primera imagen = thumbnail
-      imagenes: form.imagenes,                  // todas las imágenes
+      imagen_url: form.imagenes[0] || null,
+      imagenes: form.imagenes,
+      precio_costo: form.precio_costo ?? null,
+      costo_reales: form.costo_reales ?? null,
+      cotizacion:   form.cotizacion   ?? null,
+      flete:        form.flete        ?? null,
+      ganancia_pct: form.ganancia_pct ?? null,
     }
     let ok
     if (productoEditando) {
@@ -331,7 +488,19 @@ export default function Productos() {
                       </div>
                     </td>
                     <td className="px-4 py-3 font-inter text-sm text-stone-500">{p.categoria}</td>
-                    <td className="px-4 py-3 font-inter text-sm font-semibold text-orange">{formatPrecio(p.precio)}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-inter text-sm font-semibold text-orange">{formatPrecio(p.precio)}</span>
+                      {p.precio_costo > 0 && (
+                        <div className="font-inter text-xs text-stone-400 leading-tight mt-0.5">
+                          costo {formatPrecio(p.precio_costo)}
+                          {p.ganancia_pct > 0 && (
+                            <span className="ml-1.5 text-green-600 font-medium">
+                              · desc. máx {Math.round(p.ganancia_pct / (1 + p.ganancia_pct / 100))}%
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {p.etiqueta && (
                         <span className={`badge-etiqueta ${p.etiqueta === 'Nuevo' ? 'bg-orange-light text-orange-dark' : 'bg-caramel-light text-caramel-dark'}`}>
@@ -346,10 +515,35 @@ export default function Productos() {
                       </button>
                     </td>
                     <td className="px-4 py-3">
-                      <button onClick={() => abrirEditar(p)}
-                        className="font-inter text-xs text-orange hover:text-orange-dark border border-orange/30 hover:border-orange px-3 py-1.5 rounded-lg transition-all">
-                        Editar
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button onClick={() => abrirEditar(p)}
+                          className="font-inter text-xs text-orange hover:text-orange-dark border border-orange/30 hover:border-orange px-3 py-1.5 rounded-lg transition-all">
+                          Editar
+                        </button>
+                        {confirmEliminar === p.id ? (
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={async () => { await eliminarProducto(p.id); setConfirmEliminar(null) }}
+                              className="font-inter text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-2.5 py-1.5 rounded-lg transition-colors"
+                            >
+                              Confirmar
+                            </button>
+                            <button
+                              onClick={() => setConfirmEliminar(null)}
+                              className="font-inter text-xs text-stone-400 hover:text-stone-600 px-2 py-1.5 transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => setConfirmEliminar(p.id)}
+                            className="font-inter text-xs text-stone-300 hover:text-red-400 border border-stone-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-all"
+                          >
+                            Eliminar
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -420,6 +614,22 @@ export default function Productos() {
                   <label className="block text-sm text-stone-500 mb-1">Precio (ARS) *</label>
                   <input type="number" className="input-base" value={form.precio}
                     onChange={e => setForm(f => ({...f, precio: e.target.value}))} min="0" required />
+                  <CalculadorPrecio
+                    initialValues={{
+                      costo_reales: form.costo_reales,
+                      cotizacion:   form.cotizacion,
+                      flete:        form.flete,
+                      ganancia_pct: form.ganancia_pct,
+                    }}
+                    onAplicar={datos => setForm(f => ({ ...f,
+                      precio:       datos.precio,
+                      precio_costo: datos.precio_costo,
+                      costo_reales: datos.costo_reales,
+                      cotizacion:   datos.cotizacion,
+                      flete:        datos.flete,
+                      ganancia_pct: datos.ganancia_pct,
+                    }))}
+                  />
                 </div>
               </div>
 
