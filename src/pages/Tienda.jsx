@@ -11,14 +11,15 @@ import ModalCheckout from '../components/ModalCheckout'
 
 function TiendaConCarrito() {
   const [checkoutAbierto, setCheckoutAbierto] = useState(false)
+  const [busqueda, setBusqueda] = useState('')
 
   return (
     <div className="min-h-screen">
-      <Navbar />
+      <Navbar busqueda={busqueda} onBusqueda={setBusqueda} />
       <CarritoSidebar onCheckout={() => setCheckoutAbierto(true)} />
       {checkoutAbierto && <ModalCheckout onCerrar={() => setCheckoutAbierto(false)} />}
       <HeroCarrusel />
-      <Catalogo />
+      <Catalogo busqueda={busqueda} onLimpiarBusqueda={() => setBusqueda('')} />
       <ComoComprar />
       <Instagram />
       <Footer />

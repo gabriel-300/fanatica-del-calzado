@@ -34,6 +34,7 @@ export default function ModalPedido({ producto, talle, cantidad = 1, onCerrar })
         ``,
         `🛍️ *${producto.nombre}*${cantTexto}`,
         `📏 Talle: *${talle}*`,
+        producto._color ? `🎨 Color: *${producto._color}*` : null,
         producto.precio ? `💰 Precio: ${fmt(producto.precio)}` : null,
         producto.categoria ? `🏷️ Categoría: ${producto.categoria}` : null,
         ``,

@@ -3,7 +3,7 @@ import { useCarrito } from '../context/CarritoContext'
 
 const WA_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER || '5491100000000'
 
-export default function Navbar() {
+export default function Navbar({ busqueda = '', onBusqueda }) {
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const { cantidadTotal, abrir } = useCarrito()
@@ -33,6 +33,31 @@ export default function Navbar() {
             <span className="font-playfair text-xl font-bold text-orange">Fanática</span>
             <span className="font-playfair text-xl font-semibold italic text-caramel-dark"> del Calzado</span>
           </a>
+
+          {/* Buscador escritorio */}
+          <div className="hidden md:flex flex-1 max-w-sm mx-8">
+            <div className="relative w-full">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
+                width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35" strokeLinecap="round"/>
+              </svg>
+              <input
+                type="text"
+                value={busqueda}
+                onChange={e => { onBusqueda?.(e.target.value); if (e.target.value) document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' }) }}
+                placeholder="Buscar productos..."
+                className="w-full pl-9 pr-8 py-2 text-sm font-inter bg-cream border border-border rounded-full focus:outline-none focus:border-orange focus:ring-1 focus:ring-orange/20 transition-colors"
+              />
+              {busqueda && (
+                <button onClick={() => onBusqueda?.('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700 transition-colors">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="12" y1="4" x2="4" y2="12"/><line x1="4" y1="4" x2="12" y2="12"/>
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
 
           {/* Links escritorio */}
           <div className="hidden md:flex items-center gap-8">
@@ -90,6 +115,28 @@ export default function Navbar() {
       {/* Menú mobile */}
       {menuAbierto && (
         <div className="md:hidden bg-white border-t border-border px-4 py-4 space-y-3">
+          {/* Buscador mobile */}
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
+              width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35" strokeLinecap="round"/>
+            </svg>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={e => { onBusqueda?.(e.target.value); setMenuAbierto(false); if (e.target.value) document.getElementById('catalogo')?.scrollIntoView({ behavior: 'smooth' }) }}
+              placeholder="Buscar productos..."
+              className="w-full pl-9 pr-8 py-2.5 text-sm font-inter bg-cream border border-border rounded-full focus:outline-none focus:border-orange transition-colors"
+            />
+            {busqueda && (
+              <button onClick={() => onBusqueda?.('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="4" x2="4" y2="12"/><line x1="4" y1="4" x2="12" y2="12"/>
+                </svg>
+              </button>
+            )}
+          </div>
           {navLinks.map(link => (
             link.externo ? (
               <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer"

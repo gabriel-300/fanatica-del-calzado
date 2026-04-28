@@ -21,7 +21,7 @@ function SkeletonCard() {
   )
 }
 
-export default function Catalogo() {
+export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
   const { productos, cargando, error } = useProductos()
   const [categoriaActiva, setCategoriaActiva] = useState('Todas')
   const [detalleModal, setDetalleModal] = useState(null)
@@ -35,9 +35,17 @@ export default function Catalogo() {
   }, [productos])
 
   const productosFiltrados = useMemo(() => {
-    if (categoriaActiva === 'Todas') return productos
-    return productos.filter(p => p.categoria === categoriaActiva)
-  }, [productos, categoriaActiva])
+    let lista = categoriaActiva === 'Todas' ? productos : productos.filter(p => p.categoria === categoriaActiva)
+    if (busqueda.trim()) {
+      const q = busqueda.toLowerCase().trim()
+      lista = lista.filter(p =>
+        p.nombre?.toLowerCase().includes(q) ||
+        p.categoria?.toLowerCase().includes(q) ||
+        p.descripcion?.toLowerCase().includes(q)
+      )
+    }
+    return lista
+  }, [productos, categoriaActiva, busqueda])
 
   const abrirDetalle = (producto) => setDetalleModal(producto)
 
@@ -99,12 +107,14 @@ export default function Catalogo() {
         <div className="text-center py-16">
           <span className="text-5xl mb-4 block">👠</span>
           <p className="font-playfair text-2xl text-stone-400 mb-2">
-            {categoriaActiva === 'Todas'
-              ? 'No hay productos disponibles por el momento'
-              : `No hay ${categoriaActiva.toLowerCase()} disponibles`}
+            {busqueda.trim()
+              ? `Sin resultados para "${busqueda}"`
+              : categoriaActiva === 'Todas'
+                ? 'No hay productos disponibles por el momento'
+                : `No hay ${categoriaActiva.toLowerCase()} disponibles`}
           </p>
-          {categoriaActiva !== 'Todas' && (
-            <button onClick={() => setCategoriaActiva('Todas')} className="btn-outline mt-4 text-sm">
+          {(busqueda.trim() || categoriaActiva !== 'Todas') && (
+            <button onClick={() => { onLimpiarBusqueda?.(); setCategoriaActiva('Todas') }} className="btn-outline mt-4 text-sm">
               Ver todo el catálogo
             </button>
           )}

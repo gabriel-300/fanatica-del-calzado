@@ -16,6 +16,7 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
   const [imgError, setImgError] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState(0)
   const [lightbox, setLightbox] = useState(false)
+  const [colorSeleccionado, setColorSeleccionado] = useState(null)
 
   if (!producto) return null
 
@@ -28,6 +29,9 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
   const imagenActual = todasImagenes[selectedIdx] || null
 
   const stock = producto.stock || []
+  const colores = producto.colores || []
+
+  const imagenActualConColor = colorSeleccionado?.imagen_url || imagenActual
 
   const handleMouseMove = (e) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -47,7 +51,10 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
 
   const handleAgregarAlCarrito = () => {
     if (!validarTalle()) return
-    agregar(producto, talleSeleccionado, cantidad)
+    const productoConColor = colorSeleccionado
+      ? { ...producto, _color: colorSeleccionado.nombre }
+      : producto
+    agregar(productoConColor, talleSeleccionado, cantidad)
     toast.success(`${producto.nombre} agregado al carrito`)
     onCerrar()
     setTimeout(() => abrir(), 150)
@@ -55,7 +62,10 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
 
   const handlePedir = () => {
     if (!validarTalle()) return
-    onPedir(producto, talleSeleccionado, cantidad)
+    const productoConColor = colorSeleccionado
+      ? { ...producto, _color: colorSeleccionado.nombre }
+      : producto
+    onPedir(productoConColor, talleSeleccionado, cantidad)
   }
 
   const cambiarImagen = (idx) => {
@@ -88,7 +98,7 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
               onMouseMove={handleMouseMove}
               onMouseEnter={() => setHovering(true)}
               onMouseLeave={() => { setHovering(false); setRotate({ x: 0, y: 0 }) }}
-              onClick={() => imagenActual && !imgError && setLightbox(true)}
+              onClick={() => imagenActualConColor && !imgError && setLightbox(true)}
             >
               <div style={{
                 transform: hovering
@@ -98,10 +108,10 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
                 transformStyle: 'preserve-3d',
                 willChange: 'transform',
               }}>
-                {imagenActual && !imgError ? (
+                {imagenActualConColor && !imgError ? (
                   <img
-                    key={selectedIdx}
-                    src={imagenActual}
+                    key={colorSeleccionado?.nombre || selectedIdx}
+                    src={imagenActualConColor}
                     alt={producto.nombre}
                     onError={() => setImgError(true)}
                     draggable={false}
@@ -161,6 +171,38 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
             <p className="font-inter text-3xl font-bold text-orange">
               {formatPrecio(producto.precio)}
             </p>
+
+            {/* Colores */}
+            {colores.length > 0 && (
+              <div>
+                <p className="font-inter text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2.5">
+                  Color
+                  {colorSeleccionado && (
+                    <span className="ml-2 text-orange normal-case font-bold">— {colorSeleccionado.nombre}</span>
+                  )}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {colores.map((color) => {
+                    const seleccionado = colorSeleccionado?.nombre === color.nombre
+                    return (
+                      <button key={color.nombre}
+                        type="button"
+                        onClick={() => setColorSeleccionado(seleccionado ? null : color)}
+                        className={`flex items-center gap-2 font-inter text-sm px-3 py-2 rounded-xl border-2 transition-all duration-150 ${
+                          seleccionado
+                            ? 'border-orange shadow-lg shadow-orange/20 scale-105 bg-orange-light'
+                            : 'border-border hover:border-orange/50 bg-white'
+                        }`}
+                      >
+                        <span className="w-4 h-4 rounded-full border border-white/50 shadow-sm flex-shrink-0"
+                          style={{ backgroundColor: color.hex }} />
+                        <span className="text-stone-700">{color.nombre}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Talles */}
             <div>
@@ -269,7 +311,7 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
             </svg>
           </button>
           <img
-            src={imagenActual}
+            src={imagenActualConColor}
             alt={producto.nombre}
             className="max-w-full max-h-full object-contain rounded-xl"
             style={{ maxHeight: '90vh', maxWidth: '90vw' }}

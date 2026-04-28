@@ -11,6 +11,7 @@ const VACIO = {
   nombre: '', descripcion: '', categoria: '',
   precio: '', imagenes: [], etiqueta: '', activo: true,
   precio_costo: null, costo_reales: null, cotizacion: null, flete: null, ganancia_pct: null,
+  colores: [],
 }
 
 function formatPrecio(p) {
@@ -239,6 +240,112 @@ function StockTalles({ stockForm, setStockForm }) {
   )
 }
 
+const COLORES_SUGERIDOS = [
+  { nombre: 'Negro',    hex: '#1C1C1C' },
+  { nombre: 'Blanco',   hex: '#F5F5F5' },
+  { nombre: 'Marrón',   hex: '#8B5E3C' },
+  { nombre: 'Camel',    hex: '#C19A6B' },
+  { nombre: 'Gris',     hex: '#9E9E9E' },
+  { nombre: 'Beige',    hex: '#E8D5B0' },
+  { nombre: 'Rojo',     hex: '#D32F2F' },
+  { nombre: 'Rosa',     hex: '#E91E8C' },
+  { nombre: 'Azul',     hex: '#1565C0' },
+  { nombre: 'Verde',    hex: '#2E7D32' },
+  { nombre: 'Naranja',  hex: '#F5821F' },
+  { nombre: 'Dorado',   hex: '#C8A951' },
+]
+
+function GestorColores({ colores, onChange, imagenes }) {
+  const [nuevoNombre, setNuevoNombre] = useState('')
+  const [nuevoHex, setNuevoHex] = useState('#8B5E3C')
+
+  const agregar = () => {
+    const nombre = nuevoNombre.trim()
+    if (!nombre) { toast.error('Escribí el nombre del color'); return }
+    if (colores.some(c => c.nombre.toLowerCase() === nombre.toLowerCase())) {
+      toast.error('Ese color ya existe'); return
+    }
+    onChange([...colores, { nombre, hex: nuevoHex, imagen_url: imagenes[0] || '' }])
+    setNuevoNombre('')
+  }
+
+  const quitar = (idx) => onChange(colores.filter((_, i) => i !== idx))
+
+  const actualizar = (idx, campo, valor) => {
+    const copia = [...colores]
+    copia[idx] = { ...copia[idx], [campo]: valor }
+    onChange(copia)
+  }
+
+  return (
+    <div>
+      <p className="text-sm text-stone-500 mb-2 font-medium">Variantes de color</p>
+
+      {/* Colores existentes */}
+      {colores.length > 0 && (
+        <div className="space-y-2 mb-3">
+          {colores.map((color, idx) => (
+            <div key={idx} className="flex items-center gap-2 bg-cream rounded-lg p-2">
+              <input type="color" value={color.hex}
+                onChange={e => actualizar(idx, 'hex', e.target.value)}
+                className="w-8 h-8 rounded cursor-pointer border-0 p-0 flex-shrink-0" />
+              <span className="font-inter text-sm font-medium text-stone-700 w-20 flex-shrink-0">{color.nombre}</span>
+              <select
+                value={color.imagen_url}
+                onChange={e => actualizar(idx, 'imagen_url', e.target.value)}
+                className="flex-1 font-inter text-xs py-1.5 px-2 border border-border rounded-lg bg-white text-stone-600"
+              >
+                <option value="">— Sin imagen —</option>
+                {imagenes.map((url, i) => (
+                  <option key={i} value={url}>Foto {i + 1}</option>
+                ))}
+              </select>
+              {color.imagen_url && (
+                <img src={color.imagen_url} alt={color.nombre}
+                  className="w-8 h-8 rounded object-cover flex-shrink-0 border border-border" />
+              )}
+              <button type="button" onClick={() => quitar(idx)}
+                className="text-stone-300 hover:text-red-400 transition-colors flex-shrink-0">
+                <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="4" x2="4" y2="12"/><line x1="4" y1="4" x2="12" y2="12"/>
+                </svg>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Colores sugeridos */}
+      <div className="flex flex-wrap gap-1.5 mb-3">
+        {COLORES_SUGERIDOS.filter(s => !colores.some(c => c.nombre === s.nombre)).map(s => (
+          <button key={s.nombre} type="button"
+            onClick={() => onChange([...colores, { nombre: s.nombre, hex: s.hex, imagen_url: imagenes[0] || '' }])}
+            className="flex items-center gap-1 font-inter text-xs px-2 py-1 rounded-full border border-border hover:border-orange hover:text-orange transition-colors">
+            <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: s.hex }} />
+            {s.nombre}
+          </button>
+        ))}
+      </div>
+
+      {/* Agregar color personalizado */}
+      <div className="flex gap-2">
+        <input type="color" value={nuevoHex} onChange={e => setNuevoHex(e.target.value)}
+          className="w-9 h-9 rounded cursor-pointer border border-border p-0.5 flex-shrink-0" />
+        <input type="text" value={nuevoNombre} onChange={e => setNuevoNombre(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregar() } }}
+          placeholder="Nombre del color (ej: Bordo)" className="input-base flex-1 text-sm py-1.5" />
+        <button type="button" onClick={agregar}
+          className="flex-shrink-0 px-3 py-1.5 bg-orange text-white text-sm rounded-lg hover:bg-orange-dark transition-colors font-inter">
+          +
+        </button>
+      </div>
+      <p className="font-inter text-xs text-stone-400 mt-1.5">
+        Asociá cada color a una de las fotos cargadas arriba
+      </p>
+    </div>
+  )
+}
+
 const CALC_KEY = 'fanatica_calc'
 
 function CalculadorPrecio({ onAplicar, initialValues = {} }) {
@@ -435,6 +542,7 @@ export default function Productos() {
       cotizacion:   p.cotizacion   ?? null,
       flete:        p.flete        ?? null,
       ganancia_pct: p.ganancia_pct ?? null,
+      colores:      p.colores      ?? [],
     })
     const stockActual = {}
     ;(p.stock || []).forEach(s => { stockActual[s.talle] = s.cantidad })
@@ -460,6 +568,7 @@ export default function Productos() {
       cotizacion:   form.cotizacion   ?? null,
       flete:        form.flete        ?? null,
       ganancia_pct: form.ganancia_pct ?? null,
+      colores:      form.colores      ?? [],
     }
     let ok
     if (productoEditando) {
@@ -688,6 +797,13 @@ export default function Productos() {
                   onChange={imgs => setForm(f => ({ ...f, imagenes: imgs }))}
                 />
               </div>
+
+              {/* Colores */}
+              <GestorColores
+                colores={form.colores}
+                imagenes={form.imagenes}
+                onChange={colores => setForm(f => ({ ...f, colores }))}
+              />
 
               <StockTalles stockForm={stockForm} setStockForm={setStockForm} />
 
