@@ -13,28 +13,28 @@ export default function AdminLayout({ children, onLogout }) {
   const [sidebarAbierto, setSidebarAbierto] = useState(false)
 
   return (
-    <div className="flex h-screen bg-gray-100 font-dm overflow-hidden">
+    <div className="flex h-screen bg-cream font-inter overflow-hidden">
       {/* Overlay mobile */}
       {sidebarAbierto && (
         <div
-          className="md:hidden fixed inset-0 bg-negro/40 z-20"
+          className="md:hidden fixed inset-0 bg-stone-900/40 z-20"
           onClick={() => setSidebarAbierto(false)}
         />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        fixed md:static inset-y-0 left-0 z-30 w-64 bg-negro text-white flex flex-col
+        fixed md:static inset-y-0 left-0 z-30 w-64 bg-stone-900 text-white flex flex-col
         transition-transform duration-300
         ${sidebarAbierto ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
       `}>
         {/* Logo */}
         <div className="px-6 py-5 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <span className="font-cormorant text-lg font-bold text-white">Fanática</span>
+            <span className="font-playfair text-lg font-bold text-white">Fanática</span>
             <span>👠</span>
           </div>
-          <p className="text-xs text-white/30 font-dm mt-0.5">Panel de administración</p>
+          <p className="text-xs text-white/40 font-inter mt-0.5">Panel de administración</p>
         </div>
 
         {/* Nav */}
@@ -45,10 +45,10 @@ export default function AdminLayout({ children, onLogout }) {
               to={item.to}
               onClick={() => setSidebarAbierto(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 rounded-xl font-dm text-sm transition-all duration-150 ${
+                `flex items-center gap-3 px-4 py-3 rounded-xl font-inter text-sm transition-all duration-150 ${
                   isActive
-                    ? 'bg-coral text-white font-medium'
-                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                    ? 'bg-orange text-white font-medium'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
                 }`
               }
             >
@@ -62,7 +62,7 @@ export default function AdminLayout({ children, onLogout }) {
         <div className="px-6 py-4 border-t border-white/10">
           <button
             onClick={onLogout}
-            className="flex items-center gap-2 text-white/40 hover:text-white text-sm transition-colors w-full"
+            className="flex items-center gap-2 text-white/50 hover:text-white text-sm transition-colors w-full"
           >
             <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/>
@@ -75,10 +75,10 @@ export default function AdminLayout({ children, onLogout }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Topbar mobile */}
-        <header className="md:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3">
+        <header className="md:hidden bg-white border-b border-border px-4 py-3 flex items-center gap-3">
           <button
             onClick={() => setSidebarAbierto(true)}
-            className="text-negro/60 hover:text-negro"
+            className="text-stone-500 hover:text-stone-900"
           >
             <svg width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="3" y1="6" x2="21" y2="6"/>
@@ -86,7 +86,7 @@ export default function AdminLayout({ children, onLogout }) {
               <line x1="3" y1="18" x2="21" y2="18"/>
             </svg>
           </button>
-          <span className="font-cormorant text-lg font-bold text-negro">Fanática 👠</span>
+          <span className="font-playfair text-lg font-bold text-stone-900">Fanática 👠</span>
         </header>
 
         {/* Contenido */}

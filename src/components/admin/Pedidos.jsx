@@ -43,16 +43,16 @@ export default function Pedidos() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
-          <h1 className="font-cormorant text-3xl font-bold text-negro">Pedidos</h1>
-          <p className="font-dm text-sm text-negro/40">{pedidos.length} pedidos {filtroEstado ? `(${filtroEstado})` : 'en total'}</p>
+          <h1 className="font-playfair text-3xl font-bold text-stone-800">Pedidos</h1>
+          <p className="font-inter text-sm text-stone-800/40">{pedidos.length} pedidos {filtroEstado ? `(${filtroEstado})` : 'en total'}</p>
         </div>
 
         {/* Filtro estado */}
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setFiltroEstado('')}
-            className={`font-dm text-xs px-3 py-1.5 rounded-full border transition-all ${
-              filtroEstado === '' ? 'bg-coral text-white border-coral' : 'bg-white text-negro/60 border-gray-200 hover:border-coral hover:text-coral'
+            className={`font-inter text-xs px-3 py-1.5 rounded-full border transition-all ${
+              filtroEstado === '' ? 'bg-orange text-white border-orange' : 'bg-white text-stone-800/60 border-gray-200 hover:border-orange hover:text-orange'
             }`}
           >
             Todos
@@ -61,8 +61,8 @@ export default function Pedidos() {
             <button
               key={e}
               onClick={() => setFiltroEstado(filtroEstado === e ? '' : e)}
-              className={`font-dm text-xs px-3 py-1.5 rounded-full border transition-all capitalize ${
-                filtroEstado === e ? 'bg-coral text-white border-coral' : 'bg-white text-negro/60 border-gray-200 hover:border-coral hover:text-coral'
+              className={`font-inter text-xs px-3 py-1.5 rounded-full border transition-all capitalize ${
+                filtroEstado === e ? 'bg-orange text-white border-orange' : 'bg-white text-stone-800/60 border-gray-200 hover:border-orange hover:text-orange'
               }`}
             >
               {e}
@@ -73,14 +73,14 @@ export default function Pedidos() {
 
       <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
         {cargando ? (
-          <div className="p-10 text-center font-dm text-negro/40">Cargando pedidos...</div>
+          <div className="p-10 text-center font-inter text-stone-800/40">Cargando pedidos...</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-nude/60 border-b border-nude-dark">
+              <thead className="bg-cream/60 border-b border-border">
                 <tr>
                   {['Fecha','Producto','Talle','Cliente','Teléfono','Estado','Acción'].map(h => (
-                    <th key={h} className="text-left px-4 py-3 font-dm text-xs font-semibold text-negro/50 uppercase tracking-wider whitespace-nowrap">
+                    <th key={h} className="text-left px-4 py-3 font-inter text-xs font-semibold text-stone-800/50 uppercase tracking-wider whitespace-nowrap">
                       {h}
                     </th>
                   ))}
@@ -88,37 +88,37 @@ export default function Pedidos() {
               </thead>
               <tbody className="divide-y divide-nude/40">
                 {pedidos.map(p => (
-                  <tr key={p.id} className="hover:bg-nude/20 transition-colors">
-                    <td className="px-4 py-3 font-dm text-xs text-negro/50 whitespace-nowrap">{formatFecha(p.created_at)}</td>
+                  <tr key={p.id} className="hover:bg-cream/20 transition-colors">
+                    <td className="px-4 py-3 font-inter text-xs text-stone-800/50 whitespace-nowrap">{formatFecha(p.created_at)}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         {p.producto_imagen ? (
                           <img src={p.producto_imagen} alt={p.producto_nombre}
                             className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-nude flex items-center justify-center text-lg flex-shrink-0">👠</div>
+                          <div className="w-10 h-10 rounded-lg bg-cream flex items-center justify-center text-lg flex-shrink-0">👠</div>
                         )}
                         <div>
-                          <p className="font-dm text-sm text-negro font-medium leading-tight">{p.producto_nombre}</p>
-                          <p className="font-dm text-xs text-negro/40 leading-tight">
+                          <p className="font-inter text-sm text-stone-800 font-medium leading-tight">{p.producto_nombre}</p>
+                          <p className="font-inter text-xs text-stone-800/40 leading-tight">
                             {[p.categoria, p.producto_precio ? fmt(p.producto_precio) : null].filter(Boolean).join(' · ')}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="font-dm text-sm font-semibold text-negro/80">{p.talle}</span>
-                      {p.cantidad > 1 && <span className="font-dm text-xs text-negro/40 ml-1">x{p.cantidad}</span>}
+                      <span className="font-inter text-sm font-semibold text-stone-800/80">{p.talle}</span>
+                      {p.cantidad > 1 && <span className="font-inter text-xs text-stone-800/40 ml-1">x{p.cantidad}</span>}
                     </td>
-                    <td className="px-4 py-3 font-dm text-sm text-negro">{p.cliente_nombre}</td>
-                    <td className="px-4 py-3 font-dm text-sm text-negro/60">{p.cliente_telefono}</td>
+                    <td className="px-4 py-3 font-inter text-sm text-stone-800">{p.cliente_nombre}</td>
+                    <td className="px-4 py-3 font-inter text-sm text-stone-800/60">{p.cliente_telefono}</td>
                     <td className="px-4 py-3">
                       <select
                         value={p.estado}
                         onChange={e => cambiarEstado(p.id, e.target.value)}
-                        className={`font-dm text-xs px-2 py-1.5 rounded-lg border capitalize cursor-pointer focus:outline-none focus:ring-1 focus:ring-coral ${COLORES_ESTADO[p.estado]}`}
+                        className={`font-inter text-xs px-2 py-1.5 rounded-lg border capitalize cursor-pointer focus:outline-none focus:ring-1 focus:ring-coral ${COLORES_ESTADO[p.estado]}`}
                       >
-                        {ESTADOS.map(e => <option key={e} value={e} className="bg-white text-negro">{e}</option>)}
+                        {ESTADOS.map(e => <option key={e} value={e} className="bg-white text-stone-800">{e}</option>)}
                       </select>
                     </td>
                     <td className="px-4 py-3">
@@ -135,7 +135,7 @@ export default function Pedidos() {
                   </tr>
                 ))}
                 {pedidos.length === 0 && (
-                  <tr><td colSpan={7} className="py-12 text-center font-dm text-negro/30">No hay pedidos todavía</td></tr>
+                  <tr><td colSpan={7} className="py-12 text-center font-inter text-stone-800/30">No hay pedidos todavía</td></tr>
                 )}
               </tbody>
             </table>
