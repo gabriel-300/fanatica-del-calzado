@@ -15,6 +15,7 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
   const [hovering, setHovering] = useState(false)
   const [imgError, setImgError] = useState(false)
   const [selectedIdx, setSelectedIdx] = useState(0)
+  const [lightbox, setLightbox] = useState(false)
 
   if (!producto) return null
 
@@ -80,17 +81,18 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
           {/* Panel imagen */}
           <div className="bg-gradient-to-br from-orange-light to-caramel-light rounded-t-2xl md:rounded-l-2xl md:rounded-tr-none flex flex-col">
 
-            {/* Imagen principal con 3D */}
+            {/* Imagen principal con 3D + zoom al click */}
             <div
-              className="flex-1 flex items-center justify-center p-8 cursor-pointer select-none"
+              className="flex-1 flex items-center justify-center p-8 select-none"
+              style={{ perspective: '900px', cursor: imagenActual && !imgError ? 'zoom-in' : 'default' }}
               onMouseMove={handleMouseMove}
               onMouseEnter={() => setHovering(true)}
               onMouseLeave={() => { setHovering(false); setRotate({ x: 0, y: 0 }) }}
-              style={{ perspective: '900px' }}
+              onClick={() => imagenActual && !imgError && setLightbox(true)}
             >
               <div style={{
                 transform: hovering
-                  ? `rotateX(${rotate.x}deg) rotateY(${rotate.y}deg) scale3d(1.06,1.06,1.06)`
+                  ? `rotateX(${rotate.x}deg) rotateY(${rotate.y}deg) scale3d(1.08,1.08,1.08)`
                   : 'rotateX(0deg) rotateY(0deg) scale3d(1,1,1)',
                 transition: hovering ? 'none' : 'transform 0.7s cubic-bezier(0.23,1,0.32,1)',
                 transformStyle: 'preserve-3d',
@@ -251,6 +253,30 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
           </div>
         </div>
       </div>
+
+      {/* Lightbox */}
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[60] bg-stone-900/95 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setLightbox(false)}
+        >
+          <button
+            onClick={() => setLightbox(false)}
+            className="absolute top-4 right-4 text-white/60 hover:text-white transition-colors"
+          >
+            <svg width="28" height="28" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="24" y1="8" x2="8" y2="24"/><line x1="8" y1="8" x2="24" y2="24"/>
+            </svg>
+          </button>
+          <img
+            src={imagenActual}
+            alt={producto.nombre}
+            className="max-w-full max-h-full object-contain rounded-xl"
+            style={{ maxHeight: '90vh', maxWidth: '90vw' }}
+            onClick={e => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   )
 }
