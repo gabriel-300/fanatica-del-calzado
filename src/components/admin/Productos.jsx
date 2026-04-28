@@ -31,6 +31,7 @@ async function subirImagen(archivo) {
 // Multi-imagen: hasta 5 fotos, primera = principal
 function SelectorImagenes({ imagenes, onChange }) {
   const [subiendo, setSubiendo] = useState(false)
+  const [urlInput, setUrlInput] = useState('')
   const inputRef = useRef()
 
   const handleArchivo = async (e) => {
@@ -48,6 +49,16 @@ function SelectorImagenes({ imagenes, onChange }) {
       setSubiendo(false)
       e.target.value = ''
     }
+  }
+
+  const agregarUrl = () => {
+    const url = urlInput.trim()
+    if (!url) return
+    if (!url.startsWith('http')) { toast.error('La URL debe empezar con http'); return }
+    if (imagenes.length >= 5) { toast.error('Máximo 5 imágenes'); return }
+    if (imagenes.includes(url)) { toast.error('Esa imagen ya está agregada'); return }
+    onChange([...imagenes, url])
+    setUrlInput('')
   }
 
   const quitarImagen = (idx) => onChange(imagenes.filter((_, i) => i !== idx))
@@ -70,14 +81,12 @@ function SelectorImagenes({ imagenes, onChange }) {
                 idx === 0 ? 'border-orange' : 'border-border'
               }`} />
 
-            {/* Badge principal */}
             {idx === 0 && (
               <span className="absolute -top-1.5 -left-1.5 bg-orange text-white text-[9px] font-inter font-bold px-1.5 py-0.5 rounded-full leading-none">
                 Principal
               </span>
             )}
 
-            {/* Acciones al hover */}
             <div className="absolute inset-0 bg-stone-900/60 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
               {idx !== 0 && (
                 <button type="button" onClick={() => moverPrincipal(idx)}
@@ -95,7 +104,6 @@ function SelectorImagenes({ imagenes, onChange }) {
           </div>
         ))}
 
-        {/* Botón agregar */}
         {imagenes.length < 5 && (
           <button type="button" onClick={() => inputRef.current?.click()} disabled={subiendo}
             className="w-20 h-20 rounded-xl border-2 border-dashed border-border hover:border-orange text-stone-400 hover:text-orange transition-colors flex flex-col items-center justify-center gap-1 flex-shrink-0">
@@ -117,13 +125,31 @@ function SelectorImagenes({ imagenes, onChange }) {
       <input ref={inputRef} type="file" accept="image/jpeg,image/jpg,image/png,image/webp"
         onChange={handleArchivo} className="hidden" />
 
+      {/* Input de URL */}
+      {imagenes.length < 5 && (
+        <div className="flex gap-1.5 mt-2">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={e => setUrlInput(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); agregarUrl() } }}
+            placeholder="O pegá un link de imagen (https://...)"
+            className="input-base flex-1 text-xs py-1.5"
+          />
+          <button type="button" onClick={agregarUrl}
+            className="flex-shrink-0 px-3 py-1.5 bg-orange text-white text-xs font-inter rounded-lg hover:bg-orange-dark transition-colors">
+            +
+          </button>
+        </div>
+      )}
+
       {imagenes.length > 0 && (
-        <p className="font-inter text-xs text-stone-400">
+        <p className="font-inter text-xs text-stone-400 mt-1">
           {imagenes.length}/5 imágenes · Hover para quitar o marcar como principal
         </p>
       )}
       {imagenes.length === 0 && (
-        <p className="font-inter text-xs text-stone-400">Hacé clic en "+" para subir fotos (máx. 5)</p>
+        <p className="font-inter text-xs text-stone-400 mt-1">Subí una foto o pegá un link de imagen</p>
       )}
     </div>
   )
