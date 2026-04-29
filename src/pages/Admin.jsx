@@ -7,6 +7,7 @@ import Pedidos from '../components/admin/Pedidos'
 import Clientes from '../components/admin/Clientes'
 import Banners from '../components/admin/Banners'
 import Categorias from '../components/admin/Categorias'
+import InstagramAdmin from '../components/admin/InstagramAdmin'
 
 const PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'fanática2024'
 const SESSION_KEY = 'fanatica_admin_session'
@@ -100,6 +101,7 @@ export default function Admin() {
         <Route path="clientes" element={<Clientes />} />
         <Route path="categorias" element={<Categorias />} />
         <Route path="banners" element={<Banners />} />
+        <Route path="instagram" element={<InstagramAdmin />} />
       </Routes>
     </AdminLayout>
   )

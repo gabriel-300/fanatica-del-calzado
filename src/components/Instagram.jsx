@@ -1,12 +1,19 @@
+import { useInstagramFotos } from '../hooks/useInstagram'
+
+const FOTOS_DEFAULT = [
+  'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400',
+  'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=400',
+  'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400',
+  'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=400',
+  'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400',
+  'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
+]
+
 export default function Instagram() {
-  const fotos = [
-    'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400',
-    'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=400',
-    'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=400',
-    'https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=400',
-    'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=400',
-    'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=400',
-  ]
+  const { fotos: fotosDB, cargando } = useInstagramFotos()
+  const fotosAMostrar = fotosDB.length > 0
+    ? fotosDB.map(f => f.url)
+    : FOTOS_DEFAULT
 
   return (
     <section id="instagram" className="py-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto">
@@ -24,7 +31,7 @@ export default function Instagram() {
 
       {/* Grid de fotos */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-8">
-        {fotos.map((foto, i) => (
+        {fotosAMostrar.map((foto, i) => (
           <a
             key={i}
             href="https://instagram.com/fanaticadelcalzado_"

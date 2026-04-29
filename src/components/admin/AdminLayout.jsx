@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { to: '/admin/clientes', label: 'Clientes', icon: '👥' },
   { to: '/admin/categorias', label: 'Categorías', icon: '🏷️' },
   { to: '/admin/banners', label: 'Banners', icon: '🖼️' },
+  { to: '/admin/instagram', label: 'Instagram', icon: '📸' },
 ]
 
 export default function AdminLayout({ children, onLogout }) {
