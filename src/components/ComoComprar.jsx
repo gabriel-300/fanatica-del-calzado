@@ -35,8 +35,6 @@ const PAGOS_DEBITO = [
   { nombre: 'CABAL Débito', bg: '#00694E', color: '#fff' },
 ]
 const PAGOS_EFECTIVO = [
-  { nombre: 'Pago Fácil', bg: '#F5A623', color: '#fff' },
-  { nombre: 'Rapipago',   bg: '#E8312A', color: '#fff' },
   { nombre: 'Transferencia', bg: '#1565C0', color: '#fff' },
   { nombre: 'Mercado Pago',  bg: '#009EE3', color: '#fff' },
 ]
