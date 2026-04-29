@@ -6,6 +6,7 @@ import Stock from '../components/admin/Stock'
 import Pedidos from '../components/admin/Pedidos'
 import Clientes from '../components/admin/Clientes'
 import Banners from '../components/admin/Banners'
+import Categorias from '../components/admin/Categorias'
 
 const PASSWORD = import.meta.env.VITE_ADMIN_PASSWORD || 'fanática2024'
 const SESSION_KEY = 'fanatica_admin_session'
@@ -97,6 +98,7 @@ export default function Admin() {
         <Route path="stock" element={<Stock />} />
         <Route path="pedidos" element={<Pedidos />} />
         <Route path="clientes" element={<Clientes />} />
+        <Route path="categorias" element={<Categorias />} />
         <Route path="banners" element={<Banners />} />
       </Routes>
     </AdminLayout>
