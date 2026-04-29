@@ -844,6 +844,10 @@ export default function Productos() {
                     <div className="flex gap-1.5">
                       <select className="input-base flex-1" value={form.categoria}
                         onChange={e => setForm(f => ({...f, categoria: e.target.value}))}>
+                        {/* Si la categoría del producto no está en la lista, la mostramos igual */}
+                        {form.categoria && !categorias.includes(form.categoria) && (
+                          <option value={form.categoria}>{form.categoria}</option>
+                        )}
                         {categorias.map(c => <option key={c}>{c}</option>)}
                       </select>
                       <button type="button" onClick={() => setMostrarNuevaCat(true)}
