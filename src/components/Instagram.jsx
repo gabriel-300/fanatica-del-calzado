@@ -30,14 +30,14 @@ export default function Instagram() {
       </div>
 
       {/* Grid de fotos */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2 mb-8">
+      <div className="flex flex-wrap justify-center gap-2 mb-8">
         {fotosAMostrar.map((foto, i) => (
           <a
             key={i}
             href="https://instagram.com/fanaticadelcalzado_"
             target="_blank"
             rel="noopener noreferrer"
-            className="aspect-square overflow-hidden rounded-lg group relative"
+            className="w-[calc(50%-4px)] sm:w-[calc(33.333%-6px)] md:w-44 flex-none aspect-square overflow-hidden rounded-lg group relative"
           >
             <img
               src={foto}
