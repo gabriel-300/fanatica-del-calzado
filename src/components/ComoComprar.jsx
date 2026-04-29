@@ -22,6 +22,7 @@ const PAGOS = [
   { nombre: 'Transferencia bancaria', icono: '🏦' },
   { nombre: 'Efectivo', icono: '💵' },
   { nombre: 'Mercado Pago', icono: '📱' },
+  { nombre: 'Tarjetas de crédito', icono: '💳' },
 ]
 
 export default function ComoComprar() {
@@ -88,7 +89,7 @@ export default function ComoComprar() {
                 <span className="text-xl flex-shrink-0">📦</span>
                 <div>
                   <p className="font-inter text-sm font-medium text-stone-800 mb-1">Envío a domicilio</p>
-                  <p className="font-inter text-xs text-stone-500">A todo el país por Andreani o Correo Argentino</p>
+                  <p className="font-inter text-xs text-stone-500">Coordinamos el envío a tu dirección</p>
                 </div>
               </div>
               <div className="flex items-start gap-3 p-4 rounded-xl bg-white border border-border">
