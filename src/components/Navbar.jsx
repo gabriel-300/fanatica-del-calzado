@@ -83,8 +83,9 @@ export default function Navbar({ busqueda = '', onBusqueda }) {
               <IconInstagram />
             </a>
             <a href={`https://wa.me/${WA_NUMBER}`} target="_blank" rel="noopener noreferrer"
-               aria-label="WhatsApp" className="text-stone-400 hover:text-orange transition-colors duration-200">
+               aria-label="WhatsApp" className="flex items-center gap-1.5 text-stone-400 hover:text-orange transition-colors duration-200">
               <IconWhatsApp />
+              <span className="font-inter text-sm">375 446-0575</span>
             </a>
             {/* Carrito */}
             <button
