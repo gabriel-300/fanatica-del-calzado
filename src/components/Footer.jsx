@@ -52,7 +52,7 @@ export default function Footer() {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 font-inter text-sm text-white/50 hover:text-white transition-colors"
               >
-                <span>💬</span> WhatsApp
+                <span>💬</span> 375 446-0575
               </a>
               <a
                 href="https://instagram.com/fanaticadelcalzado_"
