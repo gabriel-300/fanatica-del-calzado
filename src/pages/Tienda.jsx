@@ -8,6 +8,7 @@ import Instagram from '../components/Instagram'
 import Footer from '../components/Footer'
 import CarritoSidebar from '../components/CarritoSidebar'
 import ModalCheckout from '../components/ModalCheckout'
+import Marcas from '../components/Marcas'
 
 function TiendaConCarrito() {
   const [checkoutAbierto, setCheckoutAbierto] = useState(false)
@@ -19,6 +20,7 @@ function TiendaConCarrito() {
       <CarritoSidebar onCheckout={() => setCheckoutAbierto(true)} />
       {checkoutAbierto && <ModalCheckout onCerrar={() => setCheckoutAbierto(false)} />}
       <HeroCarrusel />
+      <Marcas />
       <Catalogo busqueda={busqueda} onLimpiarBusqueda={() => setBusqueda('')} />
       <ComoComprar />
       <Instagram />

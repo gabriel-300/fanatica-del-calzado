@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fanaticadelcalzado.com.ar/sitemap.xml
