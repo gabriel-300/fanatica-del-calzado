@@ -1,4 +1,4 @@
-const MARCAS = ['Moleca', 'Vizzano', 'Modare', 'Di Cristalli', 'Mississipi', 'Piccadilly']
+const MARCAS = ['Moleca', 'Vizzano', 'Modare', 'Mississipi', 'Piccadilly']
 
 export default function Marcas() {
   return (
