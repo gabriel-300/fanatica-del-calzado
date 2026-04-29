@@ -10,6 +10,7 @@ const TALLES_ESTANDAR = ['35', '36', '37', '38', '39', '40', '41']
 const VACIO = {
   nombre: '', descripcion: '', categoria: '',
   precio: '', imagenes: [], etiqueta: '', activo: true,
+  codigo: '',
   precio_costo: null, costo_reales: null, cotizacion: null, flete: null, ganancia_pct: null,
   colores: [],
 }
@@ -502,6 +503,16 @@ export default function Productos() {
   const [nuevaCat, setNuevaCat] = useState('')
   const [mostrarNuevaCat, setMostrarNuevaCat] = useState(false)
   const [confirmEliminar, setConfirmEliminar] = useState(null)
+  const [busqueda, setBusqueda] = useState('')
+
+  const productosFiltrados = busqueda.trim()
+    ? productos.filter(p => {
+        const q = busqueda.toLowerCase()
+        return p.nombre?.toLowerCase().includes(q) ||
+               p.codigo?.toLowerCase().includes(q) ||
+               p.categoria?.toLowerCase().includes(q)
+      })
+    : productos
 
   const handleAgregarCategoria = async () => {
     const ok = await agregarCategoria(nuevaCat)
@@ -537,6 +548,7 @@ export default function Productos() {
       imagenes: imgs,
       etiqueta: p.etiqueta || '',
       activo: p.activo ?? true,
+      codigo: p.codigo || '',
       precio_costo: p.precio_costo ?? null,
       costo_reales: p.costo_reales ?? null,
       cotizacion:   p.cotizacion   ?? null,
@@ -563,6 +575,7 @@ export default function Productos() {
       activo: form.activo,
       imagen_url: form.imagenes[0] || null,
       imagenes: form.imagenes,
+      codigo: form.codigo?.trim() || null,
       precio_costo: form.precio_costo ?? null,
       costo_reales: form.costo_reales ?? null,
       cotizacion:   form.cotizacion   ?? null,
@@ -582,12 +595,37 @@ export default function Productos() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-playfair text-3xl font-bold text-stone-900">Productos</h1>
-          <p className="font-inter text-sm text-stone-400">{productos.length} productos en total</p>
+          <p className="font-inter text-sm text-stone-400">
+            {busqueda ? `${productosFiltrados.length} de ${productos.length}` : productos.length} productos
+          </p>
         </div>
-        <button onClick={abrirNuevo} className="btn-orange text-sm">+ Nuevo producto</button>
+        <div className="flex gap-3">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none"
+              width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="10" cy="10" r="7"/><path d="M19 19l-3.5-3.5" strokeLinecap="round"/>
+            </svg>
+            <input
+              type="text"
+              value={busqueda}
+              onChange={e => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre o código..."
+              className="pl-8 pr-8 py-2 text-sm font-inter border border-border rounded-lg focus:outline-none focus:border-orange w-56 transition-colors"
+            />
+            {busqueda && (
+              <button onClick={() => setBusqueda('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700">
+                <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="11" y1="3" x2="3" y2="11"/><line x1="3" y1="3" x2="11" y2="11"/>
+                </svg>
+              </button>
+            )}
+          </div>
+          <button onClick={abrirNuevo} className="btn-orange text-sm whitespace-nowrap">+ Nuevo producto</button>
+        </div>
       </div>
 
       {/* Tabla */}
@@ -605,7 +643,7 @@ export default function Productos() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/40">
-                {productos.map(p => (
+                {productosFiltrados.map(p => (
                   <tr key={p.id} className="hover:bg-cream/50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -616,9 +654,14 @@ export default function Productos() {
                         )}
                         <div>
                           <span className="font-inter text-sm font-medium text-stone-800">{p.nombre}</span>
-                          {p.imagenes?.length > 0 && (
-                            <p className="font-inter text-xs text-stone-400">{p.imagenes.length + 1} fotos</p>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {p.codigo && (
+                              <span className="font-inter text-xs text-orange font-medium">#{p.codigo}</span>
+                            )}
+                            {p.imagenes?.length > 0 && (
+                              <span className="font-inter text-xs text-stone-400">{p.imagenes.length + 1} fotos</span>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -682,8 +725,10 @@ export default function Productos() {
                     </td>
                   </tr>
                 ))}
-                {productos.length === 0 && (
-                  <tr><td colSpan={6} className="py-12 text-center font-inter text-stone-300">Sin productos. Creá el primero.</td></tr>
+                {productosFiltrados.length === 0 && (
+                  <tr><td colSpan={6} className="py-12 text-center font-inter text-stone-300">
+                    {busqueda ? `Sin resultados para "${busqueda}"` : 'Sin productos. Creá el primero.'}
+                  </td></tr>
                 )}
               </tbody>
             </table>
@@ -707,10 +752,21 @@ export default function Productos() {
             </h2>
 
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm text-stone-500 mb-1">Nombre *</label>
-                <input className="input-base" value={form.nombre}
-                  onChange={e => setForm(f => ({...f, nombre: e.target.value}))} required />
+              <div className="grid grid-cols-3 gap-3">
+                <div className="col-span-2">
+                  <label className="block text-sm text-stone-500 mb-1">Nombre *</label>
+                  <input className="input-base" value={form.nombre}
+                    onChange={e => setForm(f => ({...f, nombre: e.target.value}))} required />
+                </div>
+                <div>
+                  <label className="block text-sm text-stone-500 mb-1">
+                    Código
+                    <span className="text-stone-400 font-normal ml-1 text-xs">(opcional)</span>
+                  </label>
+                  <input className="input-base" value={form.codigo}
+                    onChange={e => setForm(f => ({...f, codigo: e.target.value}))}
+                    placeholder="Ej: Y1526" />
+                </div>
               </div>
 
               <div>
