@@ -504,15 +504,27 @@ export default function Productos() {
   const [mostrarNuevaCat, setMostrarNuevaCat] = useState(false)
   const [confirmEliminar, setConfirmEliminar] = useState(null)
   const [busqueda, setBusqueda] = useState('')
+  const [soloViejos, setSoloViejos] = useState(false)
 
-  const productosFiltrados = busqueda.trim()
-    ? productos.filter(p => {
-        const q = busqueda.toLowerCase()
-        return p.nombre?.toLowerCase().includes(q) ||
-               p.codigo?.toLowerCase().includes(q) ||
-               p.categoria?.toLowerCase().includes(q)
-      })
-    : productos
+  const UN_ANIO_MS = 365 * 24 * 60 * 60 * 1000
+  const esViejo = (p) => {
+    if (!p.created_at) return false
+    const tieneStock = p.stock?.some(s => s.cantidad > 0)
+    const diasEnStock = Date.now() - new Date(p.created_at).getTime()
+    return tieneStock && diasEnStock > UN_ANIO_MS
+  }
+  const diasEnStock = (p) => Math.floor((Date.now() - new Date(p.created_at).getTime()) / (24 * 60 * 60 * 1000))
+
+  const productosViejos = productos.filter(esViejo)
+
+  const productosFiltrados = productos.filter(p => {
+    if (soloViejos && !esViejo(p)) return false
+    if (!busqueda.trim()) return true
+    const q = busqueda.toLowerCase()
+    return p.nombre?.toLowerCase().includes(q) ||
+           p.codigo?.toLowerCase().includes(q) ||
+           p.categoria?.toLowerCase().includes(q)
+  })
 
   const handleAgregarCategoria = async () => {
     const ok = await agregarCategoria(nuevaCat)
@@ -595,11 +607,47 @@ export default function Productos() {
 
   return (
     <div>
+
+      {/* Alerta productos viejos */}
+      {productosViejos.length > 0 && (
+        <div className="mb-5 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+          <span className="text-2xl flex-shrink-0">⚠️</span>
+          <div className="flex-1">
+            <p className="font-inter font-semibold text-amber-800 text-sm">
+              {productosViejos.length} {productosViejos.length === 1 ? 'producto lleva' : 'productos llevan'} más de 1 año en stock
+            </p>
+            <p className="font-inter text-xs text-amber-700 mt-0.5">
+              Considerá hacer una promoción para renovar el inventario. Los artículos de mayor antigüedad tienen mayor riesgo de quedar sin salida.
+            </p>
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {productosViejos.slice(0, 5).map(p => (
+                <span key={p.id} className="font-inter text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                  {p.nombre} <span className="opacity-60">({Math.floor(diasEnStock(p) / 30)} meses)</span>
+                </span>
+              ))}
+              {productosViejos.length > 5 && (
+                <span className="font-inter text-xs text-amber-600">+{productosViejos.length - 5} más</span>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setSoloViejos(v => !v)}
+            className={`flex-shrink-0 font-inter text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              soloViejos
+                ? 'bg-amber-500 text-white border-amber-500'
+                : 'bg-white text-amber-700 border-amber-300 hover:bg-amber-100'
+            }`}
+          >
+            {soloViejos ? 'Ver todos' : 'Ver solo estos'}
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="font-playfair text-3xl font-bold text-stone-900">Productos</h1>
           <p className="font-inter text-sm text-stone-400">
-            {busqueda ? `${productosFiltrados.length} de ${productos.length}` : productos.length} productos
+            {busqueda || soloViejos ? `${productosFiltrados.length} de ${productos.length}` : productos.length} productos
           </p>
         </div>
         <div className="flex gap-3">
@@ -653,12 +701,26 @@ export default function Productos() {
                           <div className="w-10 h-10 rounded-lg bg-cream flex items-center justify-center text-lg flex-shrink-0">👠</div>
                         )}
                         <div>
-                          <span className="font-inter text-sm font-medium text-stone-800">{p.nombre}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-inter text-sm font-medium text-stone-800">{p.nombre}</span>
+                            {esViejo(p) && (
+                              <span title={`${diasEnStock(p)} días en stock`} className="text-amber-500 flex-shrink-0">
+                                <svg width="14" height="14" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                                </svg>
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             {p.codigo && (
                               <span className="font-inter text-xs text-orange font-medium">#{p.codigo}</span>
                             )}
-                            {p.imagenes?.length > 0 && (
+                            {esViejo(p) && (
+                              <span className="font-inter text-xs text-amber-600 font-medium">
+                                {Math.floor(diasEnStock(p) / 30)} meses en stock
+                              </span>
+                            )}
+                            {!esViejo(p) && p.imagenes?.length > 0 && (
                               <span className="font-inter text-xs text-stone-400">{p.imagenes.length + 1} fotos</span>
                             )}
                           </div>
