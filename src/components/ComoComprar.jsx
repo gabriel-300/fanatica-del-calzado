@@ -18,11 +18,27 @@ const PASOS = [
   },
 ]
 
-const PAGOS = [
-  { nombre: 'Transferencia bancaria', icono: '🏦' },
-  { nombre: 'Efectivo', icono: '💵' },
-  { nombre: 'Mercado Pago', icono: '📱' },
-  { nombre: 'Tarjetas de crédito', icono: '💳' },
+const PAGOS_CREDITO = [
+  { nombre: 'VISA',        bg: '#1A1F71', color: '#fff', italic: true },
+  { nombre: 'Mastercard',  bg: '#252525', color: '#fff' },
+  { nombre: 'AMEX',        bg: '#007BC1', color: '#fff' },
+  { nombre: 'Diners',      bg: '#4B4B4B', color: '#fff' },
+  { nombre: 'CABAL',       bg: '#00694E', color: '#fff' },
+  { nombre: 'Naranja',     bg: '#FF6600', color: '#fff' },
+  { nombre: 'Shopping',    bg: '#E31837', color: '#fff' },
+  { nombre: 'Nativa',      bg: '#2E7D32', color: '#fff' },
+]
+const PAGOS_DEBITO = [
+  { nombre: 'VISA Débito',  bg: '#1A1F71', color: '#fff', italic: true },
+  { nombre: 'Mastercard',   bg: '#252525', color: '#fff' },
+  { nombre: 'Maestro',      bg: '#CC0000', color: '#fff' },
+  { nombre: 'CABAL Débito', bg: '#00694E', color: '#fff' },
+]
+const PAGOS_EFECTIVO = [
+  { nombre: 'Pago Fácil', bg: '#F5A623', color: '#fff' },
+  { nombre: 'Rapipago',   bg: '#E8312A', color: '#fff' },
+  { nombre: 'Transferencia', bg: '#1565C0', color: '#fff' },
+  { nombre: 'Mercado Pago',  bg: '#009EE3', color: '#fff' },
 ]
 
 export default function ComoComprar() {
@@ -65,17 +81,49 @@ export default function ComoComprar() {
 
           {/* Pagos */}
           <div>
-            <h3 className="font-playfair text-2xl font-semibold text-stone-900 mb-6">
-              Métodos de pago
+            <h3 className="font-playfair text-2xl font-semibold text-stone-900 mb-5">
+              Medios de pago
             </h3>
-            <div className="flex flex-wrap gap-3">
-              {PAGOS.map(pago => (
-                <div key={pago.nombre}
-                     className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-caramel-light text-caramel-dark font-inter text-sm font-medium border border-border">
-                  <span>{pago.icono}</span>
-                  <span>{pago.nombre}</span>
+
+            <div className="space-y-4">
+              <div>
+                <p className="font-inter text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Crédito</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {PAGOS_CREDITO.map(p => (
+                    <span key={p.nombre}
+                      style={{ backgroundColor: p.bg, color: p.color }}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-lg font-inter text-xs font-semibold ${p.italic ? 'italic' : ''}`}>
+                      {p.nombre}
+                    </span>
+                  ))}
                 </div>
-              ))}
+              </div>
+
+              <div>
+                <p className="font-inter text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Débito</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {PAGOS_DEBITO.map(p => (
+                    <span key={p.nombre}
+                      style={{ backgroundColor: p.bg, color: p.color }}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-lg font-inter text-xs font-semibold ${p.italic ? 'italic' : ''}`}>
+                      {p.nombre}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="font-inter text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Efectivo y otros</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {PAGOS_EFECTIVO.map(p => (
+                    <span key={p.nombre}
+                      style={{ backgroundColor: p.bg, color: p.color }}
+                      className="inline-flex items-center px-3 py-1.5 rounded-lg font-inter text-xs font-semibold">
+                      {p.nombre}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
