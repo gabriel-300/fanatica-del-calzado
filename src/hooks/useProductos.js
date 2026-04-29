@@ -117,8 +117,8 @@ export function useProductosAdmin() {
 
   const eliminarProducto = async (id) => {
     try {
-      // Eliminar stock primero (FK constraint)
       await supabase.from('stock').delete().eq('producto_id', id)
+      await supabase.from('pedidos').delete().eq('producto_id', id)
       const { error } = await supabase.from('productos').delete().eq('id', id)
       if (error) throw error
       toast.success('Producto eliminado')
