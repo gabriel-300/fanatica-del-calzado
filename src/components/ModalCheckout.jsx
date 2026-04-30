@@ -1,7 +1,24 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useCarrito } from '../context/CarritoContext'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
+
+const IS_TEST      = import.meta.env.VITE_PAYWAY_TEST_MODE !== 'false'
+const DECIDIR_API  = IS_TEST
+  ? 'https://developers.decidir.com/api/v2'
+  : 'https://ventasonline.payway.com.ar/api/v2'
+const DECIDIR_JS   = 'https://ventasonline.payway.com.ar/static/v2.6.4/decidir.js'
+const PUBLIC_KEY   = import.meta.env.VITE_PAYWAY_PUBLIC_KEY ?? ''
+
+const TARJETAS = [
+  { label: 'Visa Crédito',       id: 1  },
+  { label: 'Mastercard Crédito', id: 15 },
+  { label: 'AMEX',               id: 30 },
+  { label: 'Cabal Crédito',      id: 28 },
+  { label: 'Naranja',            id: 24 },
+  { label: 'Visa Débito',        id: 6  },
+  { label: 'Mastercard Débito',  id: 23 },
+]
 
 function formatPrecio(p) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(p)
@@ -9,55 +26,91 @@ function formatPrecio(p) {
 
 export default function ModalCheckout({ onCerrar }) {
   const { items, total, vaciar } = useCarrito()
-  const [nombre, setNombre]     = useState('')
-  const [email, setEmail]       = useState('')
-  const [telefono, setTelefono] = useState('')
+  const [nombre, setNombre]         = useState('')
+  const [email, setEmail]           = useState('')
+  const [telefono, setTelefono]     = useState('')
+  const [tarjetaId, setTarjetaId]   = useState(1)
   const [procesando, setProcesando] = useState(false)
+  const [sdkListo, setSdkListo]     = useState(false)
+  const decidirRef = useRef(null)
+  const formRef    = useRef(null)
 
-  const handlePagar = async (e) => {
+  useEffect(() => {
+    if (window.Decidir) { initSDK(); return }
+    if (document.querySelector(`script[src="${DECIDIR_JS}"]`)) return
+    const s = document.createElement('script')
+    s.src = DECIDIR_JS
+    s.async = true
+    s.onload = initSDK
+    document.body.appendChild(s)
+  }, [])
+
+  function initSDK() {
+    decidirRef.current = new window.Decidir(DECIDIR_API)
+    decidirRef.current.setPublishableKey(PUBLIC_KEY)
+    decidirRef.current.setTimeout(5000)
+    setSdkListo(true)
+  }
+
+  const handlePagar = (e) => {
     e.preventDefault()
     if (!nombre.trim() || !email.trim()) {
       toast.error('Completá nombre y email para continuar')
       return
     }
-
-    setProcesando(true)
-    try {
-      const { data, error } = await supabase.functions.invoke('payway-checkout', {
-        body: {
-          items: items.map(i => ({
-            nombre:   i.producto.nombre,
-            talle:    i.talle,
-            cantidad: i.cantidad,
-            precio:   i.producto.precio,
-          })),
-          total,
-          cliente: {
-            nombre:   nombre.trim(),
-            email:    email.trim(),
-            telefono: telefono.trim(),
-          },
-        },
-      })
-
-      if (error) throw new Error(error.message)
-      if (!data?.paymentLink) throw new Error('No se recibió link de pago')
-
-      vaciar()
-      window.location.href = data.paymentLink
-    } catch (err) {
-      console.error(err)
-      toast.error('No se pudo iniciar el pago. Intentá de nuevo.')
-      setProcesando(false)
+    if (!sdkListo) {
+      toast.error('Sistema de pago cargando, intentá de nuevo')
+      return
     }
+    setProcesando(true)
+
+    decidirRef.current.createToken(formRef.current, async (status, response) => {
+      if (status !== 200 && status !== 201) {
+        console.error('Decidir token error:', response)
+        const msg = response?.error?.detail ?? response?.message ?? 'Verificá los datos de la tarjeta'
+        toast.error(msg)
+        setProcesando(false)
+        return
+      }
+
+      try {
+        const { data, error } = await supabase.functions.invoke('payway-checkout', {
+          body: {
+            items: items.map(i => ({
+              nombre:   i.producto.nombre,
+              talle:    i.talle,
+              cantidad: i.cantidad,
+              precio:   i.producto.precio,
+            })),
+            total,
+            cliente:           { nombre: nombre.trim(), email: email.trim(), telefono: telefono.trim() },
+            token:             response.id,
+            bin:               response.bin,
+            payment_method_id: tarjetaId,
+          },
+        })
+
+        if (error) throw new Error(error.message)
+
+        if (data?.aprobado) {
+          vaciar()
+          window.location.href = '/pago-exitoso'
+        } else {
+          throw new Error(data?.mensaje ?? 'Pago rechazado por el banco')
+        }
+      } catch (err) {
+        console.error(err)
+        toast.error(err.message || 'No se pudo procesar el pago. Intentá de nuevo.')
+        setProcesando(false)
+      }
+    })
   }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-stone-900/50 backdrop-blur-sm" onClick={onCerrar} />
 
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md overflow-y-auto max-h-[92vh]">
-        {/* Cerrar */}
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-y-auto max-h-[92vh]">
         <button
           onClick={onCerrar}
           className="absolute top-4 right-4 text-stone-400 hover:text-stone-700 transition-colors z-10"
@@ -69,12 +122,9 @@ export default function ModalCheckout({ onCerrar }) {
         </button>
 
         <div className="p-6">
-          {/* Header */}
           <div className="mb-5">
             <h2 className="font-playfair text-2xl font-bold text-stone-900">Datos para el pago</h2>
-            <p className="font-inter text-sm text-stone-500 mt-1">
-              Serás redirigida a PayWay para pagar de forma segura
-            </p>
+            <p className="font-inter text-sm text-stone-500 mt-1">Pago seguro con PayWay</p>
           </div>
 
           {/* Resumen del pedido */}
@@ -102,8 +152,8 @@ export default function ModalCheckout({ onCerrar }) {
             </div>
           </div>
 
-          {/* Formulario */}
-          <form onSubmit={handlePagar} className="space-y-4">
+          <form ref={formRef} onSubmit={handlePagar} className="space-y-4">
+            {/* Datos personales */}
             <div>
               <label className="block font-inter text-sm text-stone-600 mb-1.5">
                 Nombre completo <span className="text-red-400">*</span>
@@ -146,21 +196,109 @@ export default function ModalCheckout({ onCerrar }) {
               />
             </div>
 
+            {/* Datos de la tarjeta */}
+            <div className="border-t border-stone-100 pt-4">
+              <p className="font-inter text-sm font-semibold text-stone-700 mb-3">Datos de la tarjeta</p>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block font-inter text-sm text-stone-600 mb-1.5">
+                    Tipo de tarjeta <span className="text-red-400">*</span>
+                  </label>
+                  <select
+                    value={tarjetaId}
+                    onChange={e => setTarjetaId(Number(e.target.value))}
+                    className="input-base"
+                  >
+                    {TARJETAS.map(t => (
+                      <option key={t.id} value={t.id}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-inter text-sm text-stone-600 mb-1.5">
+                    Número de tarjeta <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    data-decidir="card_number"
+                    placeholder="1234 5678 9012 3456"
+                    className="input-base"
+                    maxLength={19}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-inter text-sm text-stone-600 mb-1.5">
+                    Nombre en la tarjeta <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    data-decidir="card_holder_name"
+                    placeholder="MARIA GONZALEZ"
+                    className="input-base"
+                    style={{ textTransform: 'uppercase' }}
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-inter text-sm text-stone-600 mb-1.5">
+                      Mes <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      data-decidir="card_expiration_month"
+                      placeholder="MM"
+                      className="input-base text-center"
+                      maxLength={2}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-inter text-sm text-stone-600 mb-1.5">
+                      Año <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      data-decidir="card_expiration_year"
+                      placeholder="AA"
+                      className="input-base text-center"
+                      maxLength={2}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-inter text-sm text-stone-600 mb-1.5">
+                      CVV <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      data-decidir="security_code"
+                      placeholder="123"
+                      className="input-base text-center"
+                      maxLength={4}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <button
               type="submit"
-              disabled={procesando}
+              disabled={procesando || !sdkListo}
               className="btn-orange w-full flex items-center justify-center gap-2 py-4 text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {procesando ? (
-                <>
-                  <Spinner />
-                  Redirigiendo a PayWay...
-                </>
+                <><Spinner /> Procesando pago...</>
+              ) : !sdkListo ? (
+                <><Spinner /> Cargando...</>
               ) : (
-                <>
-                  <IconLock />
-                  Pagar {formatPrecio(total)}
-                </>
+                <><IconLock /> Pagar {formatPrecio(total)}</>
               )}
             </button>
           </form>

@@ -1,17 +1,10 @@
 const PRIVATE_KEY = Deno.env.get('PAYWAY_PRIVATE_KEY') ?? ''
-const PUBLIC_KEY  = Deno.env.get('PAYWAY_PUBLIC_KEY')  ?? ''
-const SITE_ID     = Deno.env.get('PAYWAY_SITE_ID')     ?? ''
-const TEMPLATE_ID = Deno.env.get('PAYWAY_TEMPLATE_ID') ?? ''
-const SITE_URL    = Deno.env.get('SITE_URL')            ?? 'http://localhost:5173'
+const SITE_URL    = Deno.env.get('SITE_URL')            ?? 'https://fanaticadelcalzado.com.ar'
 const IS_TEST     = Deno.env.get('PAYWAY_TEST_MODE')    !== 'false'
 
 const PAYWAY_API = IS_TEST
   ? 'https://developers.decidir.com/api/v2'
   : 'https://ventasonline.payway.com.ar/api/v2'
-
-const CHECKOUT_BASE = IS_TEST
-  ? 'https://developers.decidir.com/web/checkout'
-  : 'https://live.decidir.com/web/checkout'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin':  '*',
@@ -22,9 +15,9 @@ Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { items, total, cliente } = await req.json()
+    const { items, total, cliente, token, bin, payment_method_id } = await req.json()
 
-    if (!items?.length || !total || !cliente?.nombre || !cliente?.email) {
+    if (!items?.length || !total || !cliente?.nombre || !cliente?.email || !token) {
       return new Response(
         JSON.stringify({ error: 'Datos incompletos' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -32,31 +25,23 @@ Deno.serve(async (req: Request) => {
     }
 
     const siteTransactionId = `ORD-${Date.now()}`
-    // PayWay: los últimos 2 dígitos son decimales. $43.500 ARS = 4350000
+    // Decidir: los últimos 2 dígitos son centavos. $43.500 ARS = 4350000
     const amount = Math.round(total * 100)
 
     const body = {
-      site: {
-        id: SITE_ID,
-        template_id: TEMPLATE_ID,
-      },
-      public_apikey: PUBLIC_KEY,
       site_transaction_id: siteTransactionId,
-      total_price: amount,
-      currency: 'ARS',
-      success_url: `${SITE_URL}/pago-exitoso`,
-      cancel_url:  `${SITE_URL}/pago-fallido`,
-      origin_platform: 'Web',
-      installments: [{ quantity: 1, rate: 0, description: '1 pago' }],
+      token,
+      payment_method_id:   payment_method_id ?? 1,
+      bin:                 bin ?? '',
+      amount,
+      currency:            'ARS',
+      installments:        1,
+      payment_type:        'single',
+      sub_payments:        [],
       customer: {
         id:    cliente.email,
         email: cliente.email,
       },
-      products: items.map((item: { nombre: string; talle: string; cantidad: number; precio: number }) => ({
-        description: `${item.nombre} T.${item.talle}`,
-        quantity:    item.cantidad,
-        unit_price:  Math.round(item.precio * 100),
-      })),
     }
 
     const response = await fetch(`${PAYWAY_API}/payments`, {
@@ -75,10 +60,17 @@ Deno.serve(async (req: Request) => {
       throw new Error(data?.error_message ?? JSON.stringify(data))
     }
 
-    const paymentLink = data.payment_link ?? `${CHECKOUT_BASE}/${data.id}`
+    const aprobado = data.status === 'approved'
+    const mensaje  = aprobado
+      ? 'Pago aprobado'
+      : (data.status === 'rejected'
+          ? 'Pago rechazado por el banco'
+          : `Estado: ${data.status}`)
+
+    console.log(`Pago ${data.status} — orden ${siteTransactionId} — monto ${amount}`)
 
     return new Response(
-      JSON.stringify({ paymentLink }),
+      JSON.stringify({ aprobado, mensaje, orderId: siteTransactionId }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
