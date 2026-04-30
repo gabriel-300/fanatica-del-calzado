@@ -1,6 +1,6 @@
 const WA_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER || '5491100000000'
 
-const PASOS = [
+const PASOS_WA = [
   {
     numero: '01',
     titulo: 'Elegí tu calzado',
@@ -15,6 +15,24 @@ const PASOS = [
     numero: '03',
     titulo: '¡Confirmamos y enviamos!',
     descripcion: 'Coordinamos el pago y el envío. Recibís tu calzado en la puerta de tu casa.',
+  },
+]
+
+const PASOS_TARJETA = [
+  {
+    numero: '01',
+    titulo: 'Elegí tu calzado',
+    descripcion: 'Explorá el catálogo, seleccioná el talle y hacé clic en el carrito para agregar.',
+  },
+  {
+    numero: '02',
+    titulo: 'Ingresá tus datos',
+    descripcion: 'Completá nombre, email y los datos de tu tarjeta de crédito o débito de forma segura.',
+  },
+  {
+    numero: '03',
+    titulo: '¡Pago aprobado!',
+    descripcion: 'Tu pago se procesa al instante. Recibís la confirmación y coordinamos el envío.',
   },
 ]
 
@@ -54,21 +72,78 @@ export default function ComoComprar() {
           </h2>
         </div>
 
-        {/* Pasos */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          {PASOS.map((paso, i) => (
-            <div key={i} className="text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-orange text-white font-playfair text-2xl font-bold mb-5">
-                {paso.numero}
+        {/* Dos métodos */}
+        <div className="grid md:grid-cols-2 gap-8 mb-16">
+
+          {/* WhatsApp */}
+          <div className="bg-white rounded-2xl border border-border p-8">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-full bg-[#25D366] flex items-center justify-center flex-shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347zM12 0C5.373 0 0 5.373 0 12c0 2.124.554 4.122 1.526 5.855L.057 23.882a.5.5 0 00.61.61l6.027-1.469A11.934 11.934 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0z"/>
+                </svg>
               </div>
-              <h3 className="font-playfair text-2xl font-semibold text-stone-900 mb-3">
-                {paso.titulo}
-              </h3>
-              <p className="font-inter text-sm text-stone-500 leading-relaxed">
-                {paso.descripcion}
-              </p>
+              <div>
+                <h3 className="font-playfair text-xl font-bold text-stone-900">Por WhatsApp</h3>
+                <p className="font-inter text-xs text-stone-400">Coordinás directamente con nosotras</p>
+              </div>
             </div>
-          ))}
+            <div className="space-y-6">
+              {PASOS_WA.map((paso, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="flex-shrink-0 w-9 h-9 rounded-full bg-orange/10 text-orange font-playfair font-bold text-sm flex items-center justify-center">
+                    {paso.numero}
+                  </div>
+                  <div>
+                    <p className="font-inter text-sm font-semibold text-stone-800 mb-0.5">{paso.titulo}</p>
+                    <p className="font-inter text-xs text-stone-500 leading-relaxed">{paso.descripcion}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Tarjeta */}
+          <div className="bg-white rounded-2xl border border-orange/30 p-8 relative overflow-hidden">
+            <div className="absolute top-4 right-4">
+              <span className="font-inter text-xs font-semibold text-orange bg-orange/10 px-2.5 py-1 rounded-full">
+                Pago instantáneo
+              </span>
+            </div>
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-10 h-10 rounded-full bg-orange flex items-center justify-center flex-shrink-0">
+                <svg width="20" height="20" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round">
+                  <rect x="2" y="5" width="20" height="14" rx="2"/>
+                  <line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-playfair text-xl font-bold text-stone-900">Con tarjeta online</h3>
+                <p className="font-inter text-xs text-stone-400">Pago seguro con PayWay</p>
+              </div>
+            </div>
+            <div className="space-y-6">
+              {PASOS_TARJETA.map((paso, i) => (
+                <div key={i} className="flex gap-4">
+                  <div className="flex-shrink-0 w-9 h-9 rounded-full bg-orange text-white font-playfair font-bold text-sm flex items-center justify-center">
+                    {paso.numero}
+                  </div>
+                  <div>
+                    <p className="font-inter text-sm font-semibold text-stone-800 mb-0.5">{paso.titulo}</p>
+                    <p className="font-inter text-xs text-stone-500 leading-relaxed">{paso.descripcion}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="font-inter text-xs text-stone-400 mt-6 flex items-center gap-1.5">
+              <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <rect x="1" y="5" width="10" height="7" rx="1"/>
+                <path d="M3 5V4a3 3 0 0 1 6 0v1"/>
+              </svg>
+              Visa · Mastercard · AMEX · Cabal · Naranja
+            </p>
+          </div>
+
         </div>
 
         {/* Divisor */}
