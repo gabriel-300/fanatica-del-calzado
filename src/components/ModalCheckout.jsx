@@ -247,6 +247,23 @@ export default function ModalCheckout({ onCerrar }) {
                   />
                 </div>
 
+                <div>
+                  <label className="block font-inter text-sm text-stone-600 mb-1.5">
+                    DNI del titular <span className="text-red-400">*</span>
+                  </label>
+                  <div className="flex gap-2">
+                    <input type="hidden" data-decidir="card_holder_doc_type" value="dni" readOnly />
+                    <input
+                      type="text"
+                      data-decidir="card_holder_doc_number"
+                      placeholder="Ej: 27859328"
+                      className="input-base"
+                      maxLength={8}
+                      required
+                    />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block font-inter text-sm text-stone-600 mb-1.5">
