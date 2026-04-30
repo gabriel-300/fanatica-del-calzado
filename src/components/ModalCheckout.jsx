@@ -4,10 +4,11 @@ import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
 const IS_TEST      = import.meta.env.VITE_PAYWAY_TEST_MODE !== 'false'
+// Tokenización frontend: sandbox=developers.decidir.com, prod=live.decidir.com
 const DECIDIR_API  = IS_TEST
   ? 'https://developers.decidir.com/api/v2'
-  : 'https://ventasonline.payway.com.ar/api/v2'
-const DECIDIR_JS   = 'https://ventasonline.payway.com.ar/static/v2.6.4/decidir.js'
+  : 'https://live.decidir.com/api/v2'
+const DECIDIR_JS   = 'https://live.decidir.com/static/v2.6.4/decidir.js'
 const PUBLIC_KEY   = import.meta.env.VITE_PAYWAY_PUBLIC_KEY ?? ''
 
 const TARJETAS = [
@@ -66,8 +67,10 @@ export default function ModalCheckout({ onCerrar }) {
 
     decidirRef.current.createToken(formRef.current, async (status, response) => {
       if (status !== 200 && status !== 201) {
-        console.error('Decidir token error:', response)
-        const msg = response?.error?.detail ?? response?.message ?? 'Verificá los datos de la tarjeta'
+        console.error('Decidir token error status:', status)
+        console.error('Decidir token error response:', JSON.stringify(response))
+        const errores = Array.isArray(response?.error) ? response.error : null
+        const msg = errores?.[0]?.message ?? errores?.[0]?.description ?? response?.message ?? 'Verificá los datos de la tarjeta'
         toast.error(msg)
         setProcesando(false)
         return
