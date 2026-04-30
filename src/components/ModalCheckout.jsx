@@ -41,21 +41,10 @@ export default function ModalCheckout({ onCerrar }) {
       })
 
       if (error) throw new Error(error.message)
+      if (!data?.paymentLink) throw new Error('No se recibió link de pago')
 
-      // Crear formulario oculto y enviarlo a PayWay
-      const form = document.createElement('form')
-      form.method = 'POST'
-      form.action = data.url
-      Object.entries(data.fields).forEach(([key, value]) => {
-        const input = document.createElement('input')
-        input.type  = 'hidden'
-        input.name  = key
-        input.value = value
-        form.appendChild(input)
-      })
-      document.body.appendChild(form)
       vaciar()
-      form.submit()
+      window.location.href = data.paymentLink
     } catch (err) {
       console.error(err)
       toast.error('No se pudo iniciar el pago. Intentá de nuevo.')

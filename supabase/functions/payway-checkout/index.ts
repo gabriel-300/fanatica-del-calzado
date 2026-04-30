@@ -1,43 +1,28 @@
-import { serve } from 'https://deno.land/std@0.208.0/http/server.ts'
-import { crypto } from 'https://deno.land/std@0.208.0/crypto/mod.ts'
-
-// ── Credenciales PayWay (secrets de Supabase) ──
 const PRIVATE_KEY = Deno.env.get('PAYWAY_PRIVATE_KEY') ?? ''
+const PUBLIC_KEY  = Deno.env.get('PAYWAY_PUBLIC_KEY')  ?? ''
+const SITE_ID     = Deno.env.get('PAYWAY_SITE_ID')     ?? ''
+const TEMPLATE_ID = Deno.env.get('PAYWAY_TEMPLATE_ID') ?? ''
 const SITE_URL    = Deno.env.get('SITE_URL')            ?? 'http://localhost:5173'
 const IS_TEST     = Deno.env.get('PAYWAY_TEST_MODE')    !== 'false'
 
-// Terminales E-Commerce por marca (secrets de Supabase)
-const TERMINALES: Record<string, string> = {
-  visa:       Deno.env.get('PAYWAY_TERMINAL_VISA')       ?? '',
-  mastercard: Deno.env.get('PAYWAY_TERMINAL_MASTERCARD') ?? '',
-  amex:       Deno.env.get('PAYWAY_TERMINAL_AMEX')       ?? '',
-  cabal:      Deno.env.get('PAYWAY_TERMINAL_CABAL')      ?? '',
-  diners:     Deno.env.get('PAYWAY_TERMINAL_DINERS')     ?? '',
-}
+const PAYWAY_API = IS_TEST
+  ? 'https://developers.decidir.com/api/v2'
+  : 'https://ventasonline.payway.com.ar/api/v2'
 
-const PAYWAY_URL = IS_TEST
-  ? 'https://cs-test.payway.com.ar/cs/sandbox/decision'
-  : 'https://decision.payway.com.ar/decision/'
+const CHECKOUT_BASE = IS_TEST
+  ? 'https://developers.decidir.com/web/checkout'
+  : 'https://live.decidir.com/web/checkout'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin':  '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-async function generarHash(campos: string[]): Promise<string> {
-  const buffer = await crypto.subtle.digest('MD5', new TextEncoder().encode(campos.join('#')))
-  return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
-
-function toCentavos(monto: number): string {
-  return Math.round(monto * 100).toString()
-}
-
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
   try {
-    const { items, total, cliente, marca } = await req.json()
+    const { items, total, cliente } = await req.json()
 
     if (!items?.length || !total || !cliente?.nombre || !cliente?.email) {
       return new Response(
@@ -46,50 +31,60 @@ serve(async (req) => {
       )
     }
 
-    // Seleccionar terminal según la marca elegida (default: visa)
-    const marcaKey = (marca ?? 'visa').toLowerCase()
-    const terminal = TERMINALES[marcaKey] || TERMINALES.visa
+    const siteTransactionId = `ORD-${Date.now()}`
+    // PayWay: los últimos 2 dígitos son decimales. $43.500 ARS = 4350000
+    const amount = Math.round(total * 100)
 
-    const nroOperacion = `ORD-${Date.now()}`
-    const montoStr     = toCentavos(total)
-    const tasa         = '0.00'
-    const urlOk        = `${SITE_URL}/pago-exitoso`
-    const urlError     = `${SITE_URL}/pago-fallido`
-
-    const hash = await generarHash([PRIVATE_KEY, terminal, nroOperacion, montoStr, tasa, urlOk, urlError])
-
-    const fields: Record<string, string> = {
-      cs_empresa:             terminal,
-      cs_medio_pago:          'tarjeta',
-      cs_nro_operacion:       nroOperacion,
-      cs_monto:               montoStr,
-      cs_descuento:           '0',
-      cs_tasa_financiamiento: tasa,
-      cs_cuotas:              '01',
-      cs_url_ok:              urlOk,
-      cs_url_error:           urlError,
-      cs_detalle_productos:   items.length.toString(),
-      cs_codigo_seguridad:    hash,
-      cs_nombre_comprador:    cliente.nombre,
-      cs_email_comprador:     cliente.email,
-      cs_telefono_comprador:  cliente.telefono ?? '',
+    const body = {
+      site: {
+        id: SITE_ID,
+        template_id: TEMPLATE_ID,
+      },
+      public_apikey: PUBLIC_KEY,
+      site_transaction_id: siteTransactionId,
+      total_price: amount,
+      currency: 'ARS',
+      success_url: `${SITE_URL}/pago-exitoso`,
+      cancel_url:  `${SITE_URL}/pago-fallido`,
+      origin_platform: 'Web',
+      installments: [{ quantity: 1, rate: 0, description: '1 pago' }],
+      customer: {
+        id:    cliente.email,
+        email: cliente.email,
+      },
+      products: items.map((item: { nombre: string; talle: string; cantidad: number; precio: number }) => ({
+        description: `${item.nombre} T.${item.talle}`,
+        quantity:    item.cantidad,
+        unit_price:  Math.round(item.precio * 100),
+      })),
     }
 
-    items.forEach((item: { nombre: string; talle: string; cantidad: number; precio: number }, i: number) => {
-      const n = i + 1
-      fields[`cs_detalle_descripcion_${n}`] = `${item.nombre} T.${item.talle}`
-      fields[`cs_detalle_cantidad_${n}`]    = item.cantidad.toString()
-      fields[`cs_detalle_precio_${n}`]      = toCentavos(item.precio)
+    const response = await fetch(`${PAYWAY_API}/payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': PRIVATE_KEY,
+      },
+      body: JSON.stringify(body),
     })
 
+    const data = await response.json()
+
+    if (!response.ok) {
+      console.error('PayWay API error:', JSON.stringify(data))
+      throw new Error(data?.error_message ?? JSON.stringify(data))
+    }
+
+    const paymentLink = data.payment_link ?? `${CHECKOUT_BASE}/${data.id}`
+
     return new Response(
-      JSON.stringify({ url: PAYWAY_URL, fields }),
+      JSON.stringify({ paymentLink }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (err) {
     console.error('payway-checkout error:', err)
     return new Response(
-      JSON.stringify({ error: 'Error interno' }),
+      JSON.stringify({ error: String(err) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
