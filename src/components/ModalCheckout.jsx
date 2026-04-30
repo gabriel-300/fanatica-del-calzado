@@ -3,23 +3,30 @@ import { useCarrito } from '../context/CarritoContext'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
-const IS_TEST      = import.meta.env.VITE_PAYWAY_TEST_MODE !== 'false'
-// Tokenización frontend: sandbox=developers.decidir.com, prod=live.decidir.com
-const DECIDIR_API  = IS_TEST
+const IS_TEST     = import.meta.env.VITE_PAYWAY_TEST_MODE !== 'false'
+const DECIDIR_API = IS_TEST
   ? 'https://developers.decidir.com/api/v2'
   : 'https://live.decidir.com/api/v2'
-const DECIDIR_JS   = 'https://live.decidir.com/static/v2.6.4/decidir.js'
-const PUBLIC_KEY   = import.meta.env.VITE_PAYWAY_PUBLIC_KEY ?? ''
+const DECIDIR_JS  = 'https://live.decidir.com/static/v2.6.4/decidir.js'
+const PUBLIC_KEY  = import.meta.env.VITE_PAYWAY_PUBLIC_KEY ?? ''
 
-const TARJETAS = [
-  { label: 'Visa Crédito',       id: 1  },
-  { label: 'Mastercard Crédito', id: 15 },
-  { label: 'AMEX',               id: 30 },
-  { label: 'Cabal Crédito',      id: 28 },
-  { label: 'Naranja',            id: 24 },
-  { label: 'Visa Débito',        id: 6  },
-  { label: 'Mastercard Débito',  id: 23 },
-]
+// Detecta payment_method_id desde los primeros dígitos de la tarjeta
+function getPaymentMethodId(num, credito) {
+  const n = num.replace(/\D/g, '')
+  const two = n.substring(0, 2)
+  if (n[0] === '4')                                          return credito ? 1  : 6   // Visa
+  if (['51','52','53','54','55'].includes(two) ||
+      (parseInt(n.substring(0,4)) >= 2221 && parseInt(n.substring(0,4)) <= 2720))
+                                                             return credito ? 15 : 23  // Mastercard
+  if (two === '34' || two === '37')                          return 30                 // AMEX
+  if (n.startsWith('6042') || n.startsWith('6043'))         return 28                 // Cabal
+  if (n.startsWith('589562'))                                return 24                 // Naranja
+  return credito ? 1 : 6
+}
+
+function formatCardNumber(val) {
+  return val.replace(/\D/g, '').substring(0, 16).replace(/(\d{4})(?=\d)/g, '$1 ')
+}
 
 function formatPrecio(p) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(p)
@@ -30,6 +37,8 @@ export default function ModalCheckout({ onCerrar }) {
   const [nombre, setNombre]         = useState('')
   const [email, setEmail]           = useState('')
   const [telefono, setTelefono]     = useState('')
+  const [cardNumber, setCardNumber] = useState('')
+  const [esCredito, setEsCredito]   = useState(true)
   const [tarjetaId, setTarjetaId]   = useState(1)
   const [procesando, setProcesando] = useState(false)
   const [sdkListo, setSdkListo]     = useState(false)
@@ -53,6 +62,17 @@ export default function ModalCheckout({ onCerrar }) {
     setSdkListo(true)
   }
 
+  function handleCardNumber(e) {
+    const formatted = formatCardNumber(e.target.value)
+    setCardNumber(formatted)
+    setTarjetaId(getPaymentMethodId(formatted, esCredito))
+  }
+
+  function handleEsCredito(val) {
+    setEsCredito(val)
+    setTarjetaId(getPaymentMethodId(cardNumber, val))
+  }
+
   const handlePagar = (e) => {
     e.preventDefault()
     if (!nombre.trim() || !email.trim()) {
@@ -70,7 +90,8 @@ export default function ModalCheckout({ onCerrar }) {
         console.error('Decidir token error status:', status)
         console.error('Decidir token error response:', JSON.stringify(response))
         const errores = Array.isArray(response?.error) ? response.error : null
-        const msg = errores?.[0]?.message ?? errores?.[0]?.description ?? response?.message ?? 'Verificá los datos de la tarjeta'
+        const vErr    = Array.isArray(response?.validation_errors) ? response.validation_errors : null
+        const msg = vErr?.[0]?.message ?? errores?.[0]?.message ?? response?.message ?? 'Verificá los datos de la tarjeta'
         toast.error(msg)
         setProcesando(false)
         return
@@ -99,11 +120,12 @@ export default function ModalCheckout({ onCerrar }) {
           vaciar()
           window.location.href = '/pago-exitoso'
         } else {
-          throw new Error(data?.mensaje ?? 'Pago rechazado por el banco')
+          toast.error(data?.mensaje ?? 'Pago rechazado por el banco')
+          setProcesando(false)
         }
       } catch (err) {
         console.error(err)
-        toast.error(err.message || 'No se pudo procesar el pago. Intentá de nuevo.')
+        toast.error('No se pudo procesar el pago. Intentá de nuevo.')
         setProcesando(false)
       }
     })
@@ -130,11 +152,9 @@ export default function ModalCheckout({ onCerrar }) {
             <p className="font-inter text-sm text-stone-500 mt-1">Pago seguro con PayWay</p>
           </div>
 
-          {/* Resumen del pedido */}
+          {/* Resumen */}
           <div className="bg-orange-light rounded-xl p-4 mb-5">
-            <p className="font-inter text-xs text-stone-500 uppercase tracking-wider mb-2.5">
-              Resumen del pedido
-            </p>
+            <p className="font-inter text-xs text-stone-500 uppercase tracking-wider mb-2.5">Resumen del pedido</p>
             <div className="space-y-1.5">
               {items.map(({ producto, talle, cantidad }) => (
                 <div key={`${producto.id}-${talle}`} className="flex justify-between items-baseline">
@@ -161,64 +181,47 @@ export default function ModalCheckout({ onCerrar }) {
               <label className="block font-inter text-sm text-stone-600 mb-1.5">
                 Nombre completo <span className="text-red-400">*</span>
               </label>
-              <input
-                type="text"
-                value={nombre}
-                onChange={e => setNombre(e.target.value)}
-                placeholder="Ej: María González"
-                className="input-base"
-                autoFocus
-                required
-              />
+              <input type="text" value={nombre} onChange={e => setNombre(e.target.value)}
+                placeholder="Ej: María González" className="input-base" autoFocus required />
             </div>
-
             <div>
               <label className="block font-inter text-sm text-stone-600 mb-1.5">
                 Email <span className="text-red-400">*</span>
               </label>
-              <input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="Ej: maria@email.com"
-                className="input-base"
-                required
-              />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="Ej: maria@email.com" className="input-base" required />
             </div>
-
             <div>
               <label className="block font-inter text-sm text-stone-600 mb-1.5">
                 Teléfono <span className="text-stone-400 font-normal">(opcional)</span>
               </label>
-              <input
-                type="tel"
-                value={telefono}
-                onChange={e => setTelefono(e.target.value)}
-                placeholder="Ej: 3764 123456"
-                className="input-base"
-              />
+              <input type="tel" value={telefono} onChange={e => setTelefono(e.target.value)}
+                placeholder="Ej: 3764 123456" className="input-base" />
             </div>
 
-            {/* Datos de la tarjeta */}
+            {/* Tarjeta */}
             <div className="border-t border-stone-100 pt-4">
               <p className="font-inter text-sm font-semibold text-stone-700 mb-3">Datos de la tarjeta</p>
 
-              <div className="space-y-3">
-                <div>
-                  <label className="block font-inter text-sm text-stone-600 mb-1.5">
-                    Tipo de tarjeta <span className="text-red-400">*</span>
-                  </label>
-                  <select
-                    value={tarjetaId}
-                    onChange={e => setTarjetaId(Number(e.target.value))}
-                    className="input-base"
+              {/* Crédito / Débito */}
+              <div className="flex gap-2 mb-3">
+                {[{ label: 'Crédito', val: true }, { label: 'Débito', val: false }].map(({ label, val }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => handleEsCredito(val)}
+                    className={`flex-1 py-2 rounded-lg border font-inter text-sm font-medium transition-colors
+                      ${esCredito === val
+                        ? 'border-orange bg-orange text-white'
+                        : 'border-stone-200 text-stone-600 hover:border-stone-300'}`}
                   >
-                    {TARJETAS.map(t => (
-                      <option key={t.id} value={t.id}>{t.label}</option>
-                    ))}
-                  </select>
-                </div>
+                    {label}
+                  </button>
+                ))}
+              </div>
 
+              <div className="space-y-3">
+                {/* Número */}
                 <div>
                   <label className="block font-inter text-sm text-stone-600 mb-1.5">
                     Número de tarjeta <span className="text-red-400">*</span>
@@ -226,83 +229,57 @@ export default function ModalCheckout({ onCerrar }) {
                   <input
                     type="text"
                     data-decidir="card_number"
+                    value={cardNumber}
+                    onChange={handleCardNumber}
                     placeholder="1234 5678 9012 3456"
-                    className="input-base"
+                    className="input-base tracking-widest"
                     maxLength={19}
                     required
                   />
                 </div>
 
+                {/* Nombre */}
                 <div>
                   <label className="block font-inter text-sm text-stone-600 mb-1.5">
                     Nombre en la tarjeta <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="text"
-                    data-decidir="card_holder_name"
-                    placeholder="MARIA GONZALEZ"
-                    className="input-base"
-                    style={{ textTransform: 'uppercase' }}
-                    required
-                  />
+                  <input type="text" data-decidir="card_holder_name"
+                    placeholder="MARIA GONZALEZ" className="input-base"
+                    style={{ textTransform: 'uppercase' }} required />
                 </div>
 
+                {/* DNI */}
                 <div>
                   <label className="block font-inter text-sm text-stone-600 mb-1.5">
                     DNI del titular <span className="text-red-400">*</span>
                   </label>
-                  <div className="flex gap-2">
-                    <input type="hidden" data-decidir="card_holder_doc_type" value="dni" readOnly />
-                    <input
-                      type="text"
-                      data-decidir="card_holder_doc_number"
-                      placeholder="Ej: 27859328"
-                      className="input-base"
-                      maxLength={8}
-                      required
-                    />
-                  </div>
+                  <input type="hidden" data-decidir="card_holder_doc_type" value="dni" readOnly />
+                  <input type="text" data-decidir="card_holder_doc_number"
+                    placeholder="Ej: 27859328" className="input-base" maxLength={8} required />
                 </div>
 
+                {/* Vencimiento + CVV */}
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block font-inter text-sm text-stone-600 mb-1.5">
                       Mes <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      type="text"
-                      data-decidir="card_expiration_month"
-                      placeholder="MM"
-                      className="input-base text-center"
-                      maxLength={2}
-                      required
-                    />
+                    <input type="text" data-decidir="card_expiration_month"
+                      placeholder="MM" className="input-base text-center" maxLength={2} required />
                   </div>
                   <div>
                     <label className="block font-inter text-sm text-stone-600 mb-1.5">
                       Año <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      type="text"
-                      data-decidir="card_expiration_year"
-                      placeholder="AA"
-                      className="input-base text-center"
-                      maxLength={2}
-                      required
-                    />
+                    <input type="text" data-decidir="card_expiration_year"
+                      placeholder="AA" className="input-base text-center" maxLength={2} required />
                   </div>
                   <div>
                     <label className="block font-inter text-sm text-stone-600 mb-1.5">
                       CVV <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      type="text"
-                      data-decidir="security_code"
-                      placeholder="123"
-                      className="input-base text-center"
-                      maxLength={4}
-                      required
-                    />
+                    <input type="text" data-decidir="security_code"
+                      placeholder="123" className="input-base text-center" maxLength={4} required />
                   </div>
                 </div>
               </div>
