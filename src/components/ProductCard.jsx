@@ -133,8 +133,8 @@ export default function ProductCard({ producto, onVerDetalle, descuentoEfectivo 
             )}
           </div>
 
-          {/* Precio efectivo / transferencia */}
-          {precioEfectivo && (
+          {/* Precio efectivo / transferencia (solo si no hay oferta activa) */}
+          {precioEfectivo && !ofertaActiva && (
             <div className="flex items-center gap-1.5">
               <p className="font-inter text-sm font-semibold text-green-700">
                 {formatPrecio(precioEfectivo)}
