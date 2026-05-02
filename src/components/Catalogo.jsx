@@ -129,9 +129,6 @@ export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
               <path d="M16 10a4 4 0 01-8 0"/>
             </svg>
             Ver todos los productos
-            <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
-              {productosFiltrados.length}
-            </span>
           </button>
         </div>
       )}
