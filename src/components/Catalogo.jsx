@@ -22,6 +22,8 @@ function SkeletonCard() {
   )
 }
 
+const LIMITE_INICIAL = 8
+
 export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
   const { productos, cargando, error } = useProductos()
   const { config } = useConfiguracion()
@@ -29,6 +31,7 @@ export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
   const [categoriaActiva, setCategoriaActiva] = useState('Todas')
   const [detalleModal, setDetalleModal] = useState(null)
   const [pedidoModal, setPedidoModal] = useState(null)
+  const [mostrarTodos, setMostrarTodos] = useState(false)
 
   const conteos = useMemo(() => {
     return productos.reduce((acc, p) => {
@@ -49,6 +52,13 @@ export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
     }
     return lista
   }, [productos, categoriaActiva, busqueda])
+
+  // Cuando cambia filtro o búsqueda, resetear la vista colapsada
+  const hayFiltro = busqueda.trim() || categoriaActiva !== 'Todas'
+  const productosVisibles = (mostrarTodos || hayFiltro)
+    ? productosFiltrados
+    : productosFiltrados.slice(0, LIMITE_INICIAL)
+  const hayMas = !hayFiltro && !mostrarTodos && productosFiltrados.length > LIMITE_INICIAL
 
   const abrirDetalle = (producto) => setDetalleModal(producto)
 
@@ -95,7 +105,7 @@ export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {cargando
           ? Array.from({ length: 8 }).map((_, i) => <SkeletonCard key={i} />)
-          : productosFiltrados.map(producto => (
+          : productosVisibles.map(producto => (
               <ProductCard
                 key={producto.id}
                 producto={producto}
@@ -105,6 +115,26 @@ export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
             ))
         }
       </div>
+
+      {/* Botón Ver todos los productos */}
+      {hayMas && (
+        <div className="mt-10">
+          <button
+            onClick={() => setMostrarTodos(true)}
+            className="w-full bg-stone-900 hover:bg-caramel-dark text-white font-inter font-semibold text-sm uppercase tracking-[0.2em] py-5 rounded-2xl transition-colors duration-300 flex items-center justify-center gap-3"
+          >
+            <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+              <line x1="3" y1="6" x2="21" y2="6"/>
+              <path d="M16 10a4 4 0 01-8 0"/>
+            </svg>
+            Ver todos los productos
+            <span className="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">
+              {productosFiltrados.length}
+            </span>
+          </button>
+        </div>
+      )}
 
       {/* Sin productos */}
       {!cargando && !error && productosFiltrados.length === 0 && (
