@@ -8,26 +8,61 @@ function formatPrecio(p) {
 }
 
 async function cargarImagen(src) {
-  // Cargar via fetch → blob local → sin restricción CORS en canvas
+  // fetch → blob evita CORS taint en canvas (Supabase public storage lo permite)
   try {
-    const res  = await fetch(src)
-    const blob = await res.blob()
-    const url  = URL.createObjectURL(blob)
+    const res = await fetch(src, { cache: 'no-store' })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const blob    = await res.blob()
+    const blobUrl = URL.createObjectURL(blob)
     return await new Promise((resolve, reject) => {
       const img = new Image()
-      img.onload = () => { URL.revokeObjectURL(url); resolve(img) }
-      img.onerror = reject
-      img.src = url
+      img.onload  = () => resolve(img)
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); reject() }
+      img.src = blobUrl
     })
   } catch {
-    return await new Promise((resolve, reject) => {
+    // Fallback: carga directa sin CORS — canvas puede quedar tainted pero imagen se ve.
+    // Cache-buster para evitar que el browser reutilice el error CORS cacheado del fetch.
+    return new Promise((resolve, reject) => {
       const img = new Image()
-      img.crossOrigin = 'anonymous'
-      img.onload = () => resolve(img)
-      img.onerror = reject
-      img.src = src
+      img.onload  = () => resolve(img)
+      img.onerror = () => reject(new Error('imagen no disponible'))
+      img.src = src + (src.includes('?') ? '&' : '?') + '_nc=' + Date.now()
     })
   }
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath()
+  ctx.moveTo(x + r, y)
+  ctx.lineTo(x + w - r, y)
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+  ctx.lineTo(x + w, y + h - r)
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+  ctx.lineTo(x + r, y + h)
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+  ctx.lineTo(x, y + r)
+  ctx.quadraticCurveTo(x, y, x + r, y)
+  ctx.closePath()
+}
+
+// Dibuja texto con wrap y devuelve la Y final
+function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ')
+  let line = ''
+  let cy = y
+  for (let i = 0; i < words.length; i++) {
+    const test = line + words[i] + ' '
+    if (ctx.measureText(test).width > maxWidth && i > 0) {
+      ctx.fillText(line.trim(), x, cy)
+      line = words[i] + ' '
+      cy += lineHeight
+    } else {
+      line = test
+    }
+  }
+  ctx.fillText(line.trim(), x, cy)
+  return cy
 }
 
 function dibujarStory(canvas, producto, imagen) {
@@ -43,55 +78,51 @@ function dibujarStory(canvas, producto, imagen) {
   ctx.fillStyle = bgGrad
   ctx.fillRect(0, 0, W, H)
 
-  // ── Círculo decorativo fondo (top) ─────────────────────────────────
   ctx.beginPath()
   ctx.arc(W / 2, -120, 680, 0, Math.PI * 2)
   ctx.fillStyle = '#F5821F18'
   ctx.fill()
 
-  // ── Banda superior naranja ─────────────────────────────────────────
-  const topGrad = ctx.createLinearGradient(0, 0, W, 200)
+  // ── Banda superior ─────────────────────────────────────────────────
+  const topGrad = ctx.createLinearGradient(0, 0, W, 215)
   topGrad.addColorStop(0, '#F5821F')
   topGrad.addColorStop(1, '#C4610A')
   ctx.fillStyle = topGrad
-  ctx.fillRect(0, 0, W, 220)
+  ctx.fillRect(0, 0, W, 215)
 
-  // ── Logo / nombre marca ────────────────────────────────────────────
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 52px Georgia, serif'
   ctx.textAlign = 'center'
   ctx.letterSpacing = '2px'
-  ctx.fillText('Fanática del Calzado', W / 2, 110)
+  ctx.fillText('Fanática del Calzado', W / 2, 108)
 
-  ctx.font = '32px Georgia, serif'
+  ctx.font = '30px Georgia, serif'
   ctx.fillStyle = '#FFE4C4'
-  ctx.fillText('@fanaticadelcalzado_', W / 2, 165)
+  ctx.letterSpacing = '0px'
+  ctx.fillText('@fanaticadelcalzado_', W / 2, 160)
 
-  // ── Imagen del producto ────────────────────────────────────────────
+  // ── Imagen del producto (700×700) ──────────────────────────────────
   if (imagen) {
-    const imgSize  = 820
-    const imgX     = (W - imgSize) / 2
-    const imgY     = 270
+    const imgSize = 700
+    const imgX    = (W - imgSize) / 2
+    const imgY    = 235
 
-    // Sombra
-    ctx.shadowColor   = 'rgba(0,0,0,0.15)'
-    ctx.shadowBlur    = 40
-    ctx.shadowOffsetY = 20
+    ctx.shadowColor   = 'rgba(0,0,0,0.12)'
+    ctx.shadowBlur    = 35
+    ctx.shadowOffsetY = 15
 
-    // Fondo blanco redondeado para la imagen
     ctx.fillStyle = '#FFFFFF'
     roundRect(ctx, imgX - 20, imgY - 20, imgSize + 40, imgSize + 40, 40)
     ctx.fill()
 
-    ctx.shadowColor = 'transparent'
-    ctx.shadowBlur  = 0
+    ctx.shadowColor   = 'transparent'
+    ctx.shadowBlur    = 0
+    ctx.shadowOffsetY = 0
 
-    // Clip y dibujar imagen
     ctx.save()
     roundRect(ctx, imgX, imgY, imgSize, imgSize, 30)
     ctx.clip()
 
-    // Contain: imagen completa sin cortar
     const escala = Math.min(imgSize / imagen.naturalWidth, imgSize / imagen.naturalHeight)
     const dw = imagen.naturalWidth  * escala
     const dh = imagen.naturalHeight * escala
@@ -99,99 +130,86 @@ function dibujarStory(canvas, producto, imagen) {
     ctx.restore()
   }
 
-  // ── Zona de info (parte baja) ──────────────────────────────────────
-  const infoY = 1160
+  // ── Zona de info ───────────────────────────────────────────────────
+  // Empieza en 975 para el separador, deja suficiente espacio hasta el badge (1500)
+  let cy = 975
 
-  // Separador decorativo
   ctx.fillStyle = '#F5821F'
-  ctx.fillRect(W / 2 - 60, infoY - 10, 120, 5)
+  ctx.fillRect(W / 2 - 60, cy, 120, 5)
+  cy += 60
 
-  // Etiqueta si existe
   if (producto.etiqueta) {
     ctx.fillStyle = '#F5821F'
     ctx.font = 'bold 34px Arial, sans-serif'
     ctx.textAlign = 'center'
-    const tag = `✦ ${producto.etiqueta.toUpperCase()} ✦`
-    ctx.fillText(tag, W / 2, infoY + 60)
+    ctx.fillText(`✦ ${producto.etiqueta.toUpperCase()} ✦`, W / 2, cy)
+    cy += 72
   }
 
-  // Nombre del producto
   ctx.fillStyle = '#1C1208'
-  ctx.font = 'bold 68px Georgia, serif'
+  ctx.font = 'bold 64px Georgia, serif'
   ctx.textAlign = 'center'
-  const nombreY = producto.etiqueta ? infoY + 160 : infoY + 110
-  wrapText(ctx, producto.nombre, W / 2, nombreY, W - 120, 80)
+  cy = wrapText(ctx, producto.nombre, W / 2, cy, W - 120, 76)
+  cy += 110   // deja espacio para la ascent del precio (88px)
 
-  // Precio
-  const precioY = nombreY + (producto.nombre.length > 25 ? 180 : 110)
-  ctx.font = 'bold 90px Georgia, serif'
+  ctx.font = 'bold 88px Georgia, serif'
   ctx.fillStyle = '#F5821F'
   ctx.textAlign = 'center'
-  ctx.fillText(formatPrecio(producto.precio), W / 2, precioY)
+  ctx.fillText(formatPrecio(producto.precio), W / 2, cy)
+  cy += 110
 
-  // Talles
   if (producto.talles?.length > 0) {
-    const tallesY = precioY + 100
-    ctx.font = '32px Arial, sans-serif'
+    ctx.font = '30px Arial, sans-serif'
     ctx.fillStyle = '#6B5B4E'
     ctx.textAlign = 'center'
-    ctx.fillText('TALLES DISPONIBLES', W / 2, tallesY)
-
-    const talles = producto.talles.join('  ·  ')
-    ctx.font = 'bold 44px Arial, sans-serif'
+    ctx.fillText('TALLES DISPONIBLES', W / 2, cy)
+    cy += 60
+    ctx.font = 'bold 42px Arial, sans-serif'
     ctx.fillStyle = '#1C1208'
-    ctx.fillText(talles, W / 2, tallesY + 65)
+    ctx.fillText(producto.talles.join('  ·  '), W / 2, cy)
   }
 
+  // ── Badge descuento ────────────────────────────────────────────────
+  // Siempre fijo en Y=1505, separado de la banda (que empieza en 1635)
+  const badgeH = 118
+  const badgeW = 870
+  const badgeY = 1505
+  const badgeX = (W - badgeW) / 2
+
+  ctx.fillStyle = '#1B8C4E'
+  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2)
+  ctx.fill()
+
+  // Línea decorativa interna
+  ctx.strokeStyle = 'rgba(255,255,255,0.25)'
+  ctx.lineWidth = 2
+  roundRect(ctx, badgeX + 6, badgeY + 6, badgeW - 12, badgeH - 12, (badgeH - 12) / 2)
+  ctx.stroke()
+
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = 'bold 40px Arial, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('15% DESCUENTO', W / 2, badgeY + 52)
+  ctx.font = '28px Arial, sans-serif'
+  ctx.fillStyle = '#C8F7DC'
+  ctx.fillText('EFECTIVO  /  TRANSFERENCIA', W / 2, badgeY + 93)
+
   // ── Banda inferior ─────────────────────────────────────────────────
-  const bandaY = H - 260
+  const bandaY = 1640
   const botGrad = ctx.createLinearGradient(0, bandaY, W, H)
   botGrad.addColorStop(0, '#C4610A')
   botGrad.addColorStop(1, '#F5821F')
   ctx.fillStyle = botGrad
   ctx.fillRect(0, bandaY, W, H - bandaY)
 
-  // WhatsApp CTA
   ctx.fillStyle = '#FFFFFF'
   ctx.font = 'bold 50px Arial, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('Consultá por WhatsApp 👇', W / 2, bandaY + 110)
+  ctx.fillText('Consultá por WhatsApp 👇', W / 2, bandaY + 112)
 
   ctx.font = '36px Arial, sans-serif'
   ctx.fillStyle = '#FFE4C4'
-  ctx.fillText('375 446-0575', W / 2, bandaY + 185)
-}
-
-// Helpers Canvas
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-  ctx.lineTo(x + r, y + h)
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
-  ctx.closePath()
-}
-
-function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
-  const words = text.split(' ')
-  let line = ''
-  let currentY = y
-  for (let i = 0; i < words.length; i++) {
-    const test = line + words[i] + ' '
-    if (ctx.measureText(test).width > maxWidth && i > 0) {
-      ctx.fillText(line.trim(), x, currentY)
-      line = words[i] + ' '
-      currentY += lineHeight
-    } else {
-      line = test
-    }
-  }
-  ctx.fillText(line.trim(), x, currentY)
+  ctx.fillText('375 446-0575', W / 2, bandaY + 186)
 }
 
 export default function StoryGenerator({ producto, onCerrar }) {
@@ -222,10 +240,14 @@ export default function StoryGenerator({ producto, onCerrar }) {
   }, [producto])
 
   const descargar = () => {
-    const link = document.createElement('a')
-    link.download = `story-${producto.nombre.replace(/\s+/g, '-').toLowerCase()}.png`
-    link.href = canvasRef.current.toDataURL('image/png')
-    link.click()
+    try {
+      const link = document.createElement('a')
+      link.download = `story-${producto.nombre.replace(/\s+/g, '-').toLowerCase()}.png`
+      link.href = canvasRef.current.toDataURL('image/png')
+      link.click()
+    } catch {
+      alert('No se pudo descargar: el servidor de imágenes bloqueó el acceso. Probá clic derecho → Guardar imagen en el canvas.')
+    }
   }
 
   return (
@@ -257,7 +279,7 @@ export default function StoryGenerator({ producto, onCerrar }) {
           )}
           <canvas
             ref={canvasRef}
-            style={{ width: '270px', height: '480px', borderRadius: '12px', border: '1px solid #E8D5C0', display: 'block' }}
+            style={{ width: '315px', height: '560px', borderRadius: '12px', border: '1px solid #E8D5C0', display: 'block' }}
           />
         </div>
 

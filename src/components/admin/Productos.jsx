@@ -14,6 +14,7 @@ const VACIO = {
   codigo: '',
   precio_costo: null, costo_reales: null, cotizacion: null, flete: null, ganancia_pct: null,
   colores: [],
+  oferta_pct: 0, oferta_hasta: '',
 }
 
 function formatPrecio(p) {
@@ -569,6 +570,10 @@ export default function Productos() {
       flete:        p.flete        ?? null,
       ganancia_pct: p.ganancia_pct ?? null,
       colores:      p.colores      ?? [],
+      oferta_pct:   p.oferta_pct   || 0,
+      oferta_hasta: p.oferta_hasta
+        ? new Date(p.oferta_hasta).toISOString().slice(0, 16)
+        : '',
     })
     const stockActual = {}
     ;(p.stock || []).forEach(s => { stockActual[s.talle] = s.cantidad })
@@ -596,6 +601,10 @@ export default function Productos() {
       flete:        form.flete        ?? null,
       ganancia_pct: form.ganancia_pct ?? null,
       colores:      form.colores      ?? [],
+      oferta_pct:   parseInt(form.oferta_pct) || 0,
+      oferta_hasta: form.oferta_pct > 0 && form.oferta_hasta
+        ? new Date(form.oferta_hasta).toISOString()
+        : null,
     }
     let ok
     if (productoEditando) {
@@ -916,6 +925,46 @@ export default function Productos() {
                     <span className="font-inter text-sm text-stone-600">Activo en tienda</span>
                   </label>
                 </div>
+              </div>
+
+              {/* Oferta por tiempo */}
+              <div className={`rounded-xl p-4 border ${form.oferta_pct > 0 ? 'bg-lime-50 border-lime-200' : 'bg-cream border-border'}`}>
+                <p className="font-inter text-sm font-semibold text-stone-700 mb-3 flex items-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  Oferta por tiempo limitado
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">Descuento (%)</label>
+                    <div className="relative">
+                      <input
+                        type="number" min="0" max="90" step="1"
+                        value={form.oferta_pct}
+                        onChange={e => setForm(f => ({ ...f, oferta_pct: e.target.value }))}
+                        className="input-base pr-7"
+                        placeholder="0 = sin oferta"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 font-inter text-xs text-stone-400">%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-stone-500 mb-1">Válido hasta</label>
+                    <input
+                      type="datetime-local"
+                      value={form.oferta_hasta}
+                      onChange={e => setForm(f => ({ ...f, oferta_hasta: e.target.value }))}
+                      className="input-base text-sm"
+                      disabled={!form.oferta_pct || parseInt(form.oferta_pct) === 0}
+                    />
+                  </div>
+                </div>
+                {form.oferta_pct > 0 && (
+                  <p className="font-inter text-xs text-lime-700 mt-2">
+                    Mostrará badge "-{form.oferta_pct}% OFF" con cuenta regresiva en el catálogo
+                  </p>
+                )}
               </div>
 
               {/* Imágenes */}

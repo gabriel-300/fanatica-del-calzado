@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useProductos } from '../hooks/useProductos'
+import { useConfiguracion } from '../hooks/useConfiguracion'
 import ProductCard from './ProductCard'
 import FiltrosCategorias from './FiltrosCategorias'
 import ModalProducto from './ModalProducto'
@@ -23,6 +24,8 @@ function SkeletonCard() {
 
 export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
   const { productos, cargando, error } = useProductos()
+  const { config } = useConfiguracion()
+  const descuentoEfectivo = parseInt(config.descuento_efectivo_pct) || 0
   const [categoriaActiva, setCategoriaActiva] = useState('Todas')
   const [detalleModal, setDetalleModal] = useState(null)
   const [pedidoModal, setPedidoModal] = useState(null)
@@ -97,6 +100,7 @@ export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
                 key={producto.id}
                 producto={producto}
                 onVerDetalle={abrirDetalle}
+                descuentoEfectivo={descuentoEfectivo}
               />
             ))
         }
@@ -127,6 +131,7 @@ export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
           producto={detalleModal}
           onCerrar={() => setDetalleModal(null)}
           onPedir={abrirPedido}
+          descuentoEfectivo={descuentoEfectivo}
         />
       )}
 

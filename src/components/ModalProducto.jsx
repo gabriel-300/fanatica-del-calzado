@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useCarrito } from '../context/CarritoContext'
 import toast from 'react-hot-toast'
 
@@ -6,7 +6,30 @@ function formatPrecio(precio) {
   return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 }).format(precio)
 }
 
-export default function ModalProducto({ producto, onCerrar, onPedir }) {
+function useOferta(producto) {
+  const [activa, setActiva] = useState(false)
+  const [restante, setRestante] = useState('')
+
+  useEffect(() => {
+    if (!producto?.oferta_pct || !producto?.oferta_hasta) return
+    const tick = () => {
+      const diff = new Date(producto.oferta_hasta) - Date.now()
+      if (diff <= 0) { setActiva(false); setRestante(''); return }
+      setActiva(true)
+      const d = Math.floor(diff / 86400000)
+      const h = Math.floor((diff % 86400000) / 3600000)
+      const m = Math.floor((diff % 3600000) / 60000)
+      setRestante(d > 0 ? `${d}d ${h}h` : h > 0 ? `${h}h ${m}m` : `${m}min`)
+    }
+    tick()
+    const id = setInterval(tick, 60000)
+    return () => clearInterval(id)
+  }, [producto?.oferta_pct, producto?.oferta_hasta])
+
+  return { activa, restante }
+}
+
+export default function ModalProducto({ producto, onCerrar, onPedir, descuentoEfectivo = 0 }) {
   const { agregar, abrir } = useCarrito()
   const [talleSeleccionado, setTalleSeleccionado] = useState(null)
   const [cantidad, setCantidad] = useState(1)
@@ -18,7 +41,17 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
   const [lightbox, setLightbox] = useState(false)
   const [colorSeleccionado, setColorSeleccionado] = useState(null)
 
+  const { activa: ofertaActiva, restante } = useOferta(producto)
+
   if (!producto) return null
+
+  const precioConOferta = ofertaActiva
+    ? Math.round(producto.precio * (1 - producto.oferta_pct / 100))
+    : producto.precio
+
+  const precioEfectivo = descuentoEfectivo > 0
+    ? Math.round(precioConOferta * (1 - descuentoEfectivo / 100))
+    : null
 
   // Combinar imagen_url + imagenes[] sin duplicados
   const todasImagenes = [
@@ -168,9 +201,51 @@ export default function ModalProducto({ producto, onCerrar, onPedir }) {
               )}
             </div>
 
-            <p className="font-inter text-3xl font-bold text-orange">
-              {formatPrecio(producto.precio)}
-            </p>
+            <div className="space-y-1">
+              {/* Precio tachado si hay oferta */}
+              {ofertaActiva && (
+                <p className="font-inter text-sm text-stone-400 line-through">
+                  {formatPrecio(producto.precio)}
+                </p>
+              )}
+
+              {/* Precio con tarjeta */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className="font-inter text-3xl font-bold text-orange">
+                  {formatPrecio(precioConOferta)}
+                </p>
+                {ofertaActiva && (
+                  <span className="font-inter text-sm font-bold px-2.5 py-1 rounded-full bg-lime-500 text-white">
+                    -{producto.oferta_pct}% OFF
+                  </span>
+                )}
+                {!ofertaActiva && (
+                  <span className="font-inter text-xs text-stone-400 self-end mb-1">con tarjeta</span>
+                )}
+              </div>
+
+              {/* Precio efectivo / transferencia */}
+              {precioEfectivo && (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-inter text-xl font-bold text-green-700">
+                    {formatPrecio(precioEfectivo)}
+                  </p>
+                  <span className="font-inter text-xs text-green-600 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                    -{descuentoEfectivo}% efectivo · transf.
+                  </span>
+                </div>
+              )}
+
+              {/* Countdown */}
+              {ofertaActiva && restante && (
+                <div className="flex items-center gap-1.5 mt-1">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="text-lime-600 flex-shrink-0">
+                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                  </svg>
+                  <span className="font-inter text-xs text-lime-700 font-medium">Oferta termina en {restante}</span>
+                </div>
+              )}
+            </div>
 
             {/* Colores */}
             {colores.length > 0 && (
