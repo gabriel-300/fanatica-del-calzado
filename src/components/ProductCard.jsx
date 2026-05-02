@@ -140,7 +140,7 @@ export default function ProductCard({ producto, onVerDetalle, descuentoEfectivo 
                 {formatPrecio(precioEfectivo)}
               </p>
               <span className="font-inter text-[10px] text-green-600 bg-green-50 border border-green-200 px-1.5 py-0.5 rounded-full leading-none">
-                -{descuentoEfectivo}% efectivo
+                -{descuentoEfectivo}% efectivo / transf.
               </span>
             </div>
           )}
