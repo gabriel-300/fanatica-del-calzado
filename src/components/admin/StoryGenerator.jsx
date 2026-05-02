@@ -8,19 +8,26 @@ function formatPrecio(p) {
 }
 
 async function cargarImagen(src) {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.crossOrigin = 'anonymous'
-    img.onload = () => resolve(img)
-    img.onerror = () => {
-      // Intentar sin crossOrigin como fallback
-      const img2 = new Image()
-      img2.onload = () => resolve(img2)
-      img2.onerror = reject
-      img2.src = src + '?v=' + Date.now()
-    }
-    img.src = src
-  })
+  // Cargar via fetch → blob local → sin restricción CORS en canvas
+  try {
+    const res  = await fetch(src)
+    const blob = await res.blob()
+    const url  = URL.createObjectURL(blob)
+    return await new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img) }
+      img.onerror = reject
+      img.src = url
+    })
+  } catch {
+    return await new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = src
+    })
+  }
 }
 
 function dibujarStory(canvas, producto, imagen) {
@@ -84,8 +91,8 @@ function dibujarStory(canvas, producto, imagen) {
     roundRect(ctx, imgX, imgY, imgSize, imgSize, 30)
     ctx.clip()
 
-    // Ajustar imagen manteniendo proporción
-    const escala = Math.max(imgSize / imagen.naturalWidth, imgSize / imagen.naturalHeight)
+    // Contain: imagen completa sin cortar
+    const escala = Math.min(imgSize / imagen.naturalWidth, imgSize / imagen.naturalHeight)
     const dw = imagen.naturalWidth  * escala
     const dh = imagen.naturalHeight * escala
     ctx.drawImage(imagen, imgX + (imgSize - dw) / 2, imgY + (imgSize - dh) / 2, dw, dh)
