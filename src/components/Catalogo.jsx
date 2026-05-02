@@ -22,7 +22,7 @@ function SkeletonCard() {
   )
 }
 
-const LIMITE_INICIAL = 8
+const LIMITE_INICIAL = 40
 
 export default function Catalogo({ busqueda = '', onLimpiarBusqueda }) {
   const { productos, cargando, error } = useProductos()
