@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import { useProductosAdmin } from '../../hooks/useProductos'
 import { useCategorias } from '../../hooks/useCategorias'
+import { useVentas } from '../../hooks/useVentas'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 import StoryGenerator from './StoryGenerator'
@@ -494,9 +495,12 @@ function CalculadorPrecio({ onAplicar, initialValues = {} }) {
   )
 }
 
+const VENTA_VACIA = { talle: '', cantidad: 1, precio: '', metodo_pago: 'efectivo' }
+
 export default function Productos() {
-  const { productos, cargando, crearProducto, editarProducto, eliminarProducto, toggleActivo } = useProductosAdmin()
+  const { productos, cargando, crearProducto, editarProducto, eliminarProducto, toggleActivo, recargar } = useProductosAdmin()
   const { categorias, agregarCategoria } = useCategorias()
+  const { registrarVenta } = useVentas()
   const [modalAbierto, setModalAbierto] = useState(false)
   const [productoEditando, setProductoEditando] = useState(null)
   const [form, setForm] = useState(VACIO)
@@ -505,9 +509,39 @@ export default function Productos() {
   const [nuevaCat, setNuevaCat] = useState('')
   const [mostrarNuevaCat, setMostrarNuevaCat] = useState(false)
   const [confirmEliminar, setConfirmEliminar] = useState(null)
-  const [storyProducto, setStoryProducto]     = useState(null)
+  const [storyProducto, setStoryProducto] = useState(null)
   const [busqueda, setBusqueda] = useState('')
   const [soloViejos, setSoloViejos] = useState(false)
+  const [ventaProducto, setVentaProducto] = useState(null)
+  const [ventaForm, setVentaForm] = useState(VENTA_VACIA)
+  const [registrandoVenta, setRegistrandoVenta] = useState(false)
+
+  const abrirVenta = (p) => {
+    const tallesConStock = (p.stock || []).filter(s => s.cantidad > 0)
+    const primerTalle = tallesConStock[0]?.talle || ''
+    setVentaForm({ talle: primerTalle, cantidad: 1, precio: p.precio, metodo_pago: 'efectivo' })
+    setVentaProducto(p)
+  }
+
+  const handleRegistrarVenta = async (e) => {
+    e.preventDefault()
+    if (!ventaForm.talle) { toast.error('Seleccioná un talle'); return }
+    if (!ventaForm.precio) { toast.error('Ingresá el precio'); return }
+    setRegistrandoVenta(true)
+    const ok = await registrarVenta({
+      producto_id:      ventaProducto.id,
+      producto_nombre:  ventaProducto.nombre,
+      talle:            ventaForm.talle,
+      cantidad:         parseInt(ventaForm.cantidad) || 1,
+      precio:           parseFloat(ventaForm.precio) || 0,
+      metodo_pago:      ventaForm.metodo_pago,
+    })
+    if (ok) {
+      setVentaProducto(null)
+      recargar()
+    }
+    setRegistrandoVenta(false)
+  }
 
   const UN_ANIO_MS = 365 * 24 * 60 * 60 * 1000
   const esViejo = (p) => {
@@ -783,6 +817,16 @@ export default function Productos() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
+                        <button onClick={() => abrirVenta(p)}
+                          title="Registrar venta"
+                          className="font-inter text-xs text-green-600 hover:text-green-800 border border-green-200 hover:border-green-400 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
+                          <svg width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                            <path d="M9 2H5a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6l-4-4z"/>
+                            <polyline points="9 2 9 6 13 6"/>
+                            <line x1="7" y1="10" x2="11" y2="10"/>
+                          </svg>
+                          Vender
+                        </button>
                         <button onClick={() => setStoryProducto(p)}
                           title="Generar Story para Instagram"
                           className="font-inter text-xs text-pink-500 hover:text-pink-700 border border-pink-200 hover:border-pink-400 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1">
@@ -1031,6 +1075,120 @@ export default function Productos() {
           producto={storyProducto}
           onCerrar={() => setStoryProducto(null)}
         />
+      )}
+
+      {/* Modal Registrar Venta */}
+      {ventaProducto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-stone-900/50 backdrop-blur-sm" onClick={() => setVentaProducto(null)} />
+          <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <button onClick={() => setVentaProducto(null)} className="absolute top-4 right-4 text-stone-400 hover:text-stone-700">
+              <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+
+            <h2 className="font-playfair text-xl font-bold text-stone-900 mb-1">Registrar venta</h2>
+            <p className="font-inter text-sm text-stone-400 mb-5 line-clamp-1">{ventaProducto.nombre}</p>
+
+            <form onSubmit={handleRegistrarVenta} className="space-y-4">
+              {/* Talle */}
+              <div>
+                <label className="block font-inter text-sm text-stone-500 mb-2">Talle</label>
+                <div className="flex flex-wrap gap-2">
+                  {(ventaProducto.stock || [])
+                    .sort((a, b) => a.talle.localeCompare(b.talle, undefined, { numeric: true }))
+                    .map(({ talle, cantidad }) => (
+                      <button
+                        key={talle}
+                        type="button"
+                        disabled={cantidad === 0}
+                        onClick={() => setVentaForm(f => ({ ...f, talle }))}
+                        className={`font-inter text-sm px-3 py-1.5 rounded-xl border-2 transition-all ${
+                          ventaForm.talle === talle
+                            ? 'bg-green-600 text-white border-green-600'
+                            : cantidad === 0
+                              ? 'text-stone-300 border-border/40 line-through cursor-not-allowed opacity-40'
+                              : 'border-border text-stone-600 hover:border-green-400'
+                        }`}
+                      >
+                        {talle}
+                        <span className="ml-1 text-[10px] opacity-60">({cantidad})</span>
+                      </button>
+                    ))}
+                </div>
+              </div>
+
+              {/* Cantidad y Precio */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-inter text-sm text-stone-500 mb-1">Cantidad</label>
+                  <input
+                    type="number" min="1"
+                    value={ventaForm.cantidad}
+                    onChange={e => setVentaForm(f => ({ ...f, cantidad: e.target.value }))}
+                    className="input-base"
+                  />
+                </div>
+                <div>
+                  <label className="block font-inter text-sm text-stone-500 mb-1">Precio ($)</label>
+                  <input
+                    type="number" min="0"
+                    value={ventaForm.precio}
+                    onChange={e => setVentaForm(f => ({ ...f, precio: e.target.value }))}
+                    className="input-base"
+                  />
+                </div>
+              </div>
+
+              {/* Método de pago */}
+              <div>
+                <label className="block font-inter text-sm text-stone-500 mb-2">Método de pago</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { key: 'tarjeta',       label: 'Tarjeta',       color: 'blue' },
+                    { key: 'efectivo',      label: 'Efectivo',      color: 'green' },
+                    { key: 'transferencia', label: 'Transferencia', color: 'purple' },
+                  ].map(({ key, label, color }) => (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setVentaForm(f => ({ ...f, metodo_pago: key }))}
+                      className={`font-inter text-xs font-semibold py-2.5 rounded-xl border-2 transition-all ${
+                        ventaForm.metodo_pago === key
+                          ? color === 'blue'   ? 'bg-blue-600 text-white border-blue-600'
+                          : color === 'green'  ? 'bg-green-600 text-white border-green-600'
+                          :                     'bg-purple-600 text-white border-purple-600'
+                          : 'border-border text-stone-500 hover:border-stone-400'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Total */}
+              {ventaForm.precio && ventaForm.cantidad && (
+                <div className="bg-cream rounded-xl p-3 flex items-center justify-between">
+                  <span className="font-inter text-sm text-stone-500">Total</span>
+                  <span className="font-playfair text-xl font-bold text-orange">
+                    {new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', maximumFractionDigits: 0 })
+                      .format((parseFloat(ventaForm.precio) || 0) * (parseInt(ventaForm.cantidad) || 1))}
+                  </span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={registrandoVenta || !ventaForm.talle}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-inter font-semibold py-3 rounded-xl transition-colors disabled:opacity-50"
+              >
+                {registrandoVenta ? 'Registrando...' : 'Registrar venta'}
+              </button>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   )
