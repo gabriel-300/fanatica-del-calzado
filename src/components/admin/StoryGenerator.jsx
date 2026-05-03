@@ -8,7 +8,6 @@ function formatPrecio(p) {
 }
 
 async function cargarImagen(src) {
-  // fetch → blob evita CORS taint en canvas (Supabase public storage lo permite)
   try {
     const res = await fetch(src, { cache: 'no-store' })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
@@ -21,8 +20,6 @@ async function cargarImagen(src) {
       img.src = blobUrl
     })
   } catch {
-    // Fallback: carga directa sin CORS — canvas puede quedar tainted pero imagen se ve.
-    // Cache-buster para evitar que el browser reutilice el error CORS cacheado del fetch.
     return new Promise((resolve, reject) => {
       const img = new Image()
       img.onload  = () => resolve(img)
@@ -46,7 +43,6 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath()
 }
 
-// Dibuja texto con wrap y devuelve la Y final
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
   const words = text.split(' ')
   let line = ''
@@ -72,144 +68,223 @@ function dibujarStory(canvas, producto, imagen) {
 
   // ── Fondo ──────────────────────────────────────────────────────────
   const bgGrad = ctx.createLinearGradient(0, 0, 0, H)
-  bgGrad.addColorStop(0,   '#FDF8F3')
-  bgGrad.addColorStop(0.5, '#FAEEE0')
-  bgGrad.addColorStop(1,   '#F5E6D3')
+  bgGrad.addColorStop(0,    '#FDF9F5')
+  bgGrad.addColorStop(0.45, '#FAF0E6')
+  bgGrad.addColorStop(1,    '#F2DFCC')
   ctx.fillStyle = bgGrad
   ctx.fillRect(0, 0, W, H)
 
+  // Círculos decorativos sutiles
   ctx.beginPath()
-  ctx.arc(W / 2, -120, 680, 0, Math.PI * 2)
-  ctx.fillStyle = '#F5821F18'
+  ctx.arc(W + 80, 460, 540, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(245,130,31,0.06)'
+  ctx.fill()
+
+  ctx.beginPath()
+  ctx.arc(-80, H - 340, 480, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(245,130,31,0.06)'
   ctx.fill()
 
   // ── Banda superior ─────────────────────────────────────────────────
-  const topGrad = ctx.createLinearGradient(0, 0, W, 215)
-  topGrad.addColorStop(0, '#F5821F')
-  topGrad.addColorStop(1, '#C4610A')
+  const topGrad = ctx.createLinearGradient(0, 0, W, 225)
+  topGrad.addColorStop(0,   '#E8720F')
+  topGrad.addColorStop(0.5, '#F5821F')
+  topGrad.addColorStop(1,   '#C85E0A')
   ctx.fillStyle = topGrad
-  ctx.fillRect(0, 0, W, 215)
+  ctx.fillRect(0, 0, W, 225)
+
+  // Líneas decorativas flanqueando el título
+  ctx.fillStyle = 'rgba(255,255,255,0.35)'
+  ctx.fillRect(52, 98, 130, 2)
+  ctx.fillRect(W - 182, 98, 130, 2)
 
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 52px Georgia, serif'
+  ctx.font = 'bold 56px Georgia, serif'
   ctx.textAlign = 'center'
-  ctx.letterSpacing = '2px'
-  ctx.fillText('Fanática del Calzado', W / 2, 108)
+  ctx.fillText('Fanática del Calzado', W / 2, 114)
 
-  ctx.font = '30px Georgia, serif'
-  ctx.fillStyle = '#FFE4C4'
-  ctx.letterSpacing = '0px'
-  ctx.fillText('@fanaticadelcalzado_', W / 2, 160)
+  ctx.font = '31px Georgia, serif'
+  ctx.fillStyle = '#FFE8D0'
+  ctx.fillText('@fanaticadelcalzado_', W / 2, 170)
 
-  // ── Imagen del producto (700×700) ──────────────────────────────────
+  // Línea inferior banda
+  ctx.fillStyle = 'rgba(255,255,255,0.12)'
+  ctx.fillRect(0, 220, W, 5)
+
+  // ── Imagen del producto ─────────────────────────────────────────────
+  const imgSize = 770
+  const imgX    = (W - imgSize) / 2
+  const imgY    = 250
+
+  // Sombra suave del contenedor
+  ctx.shadowColor   = 'rgba(92,58,30,0.16)'
+  ctx.shadowBlur    = 55
+  ctx.shadowOffsetY = 22
+  ctx.fillStyle = '#FFFFFF'
+  roundRect(ctx, imgX - 24, imgY - 16, imgSize + 48, imgSize + 38, 50)
+  ctx.fill()
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0
+
+  // Contenedor imagen con fondo cálido
+  ctx.save()
+  roundRect(ctx, imgX, imgY, imgSize, imgSize, 34)
+  ctx.clip()
+  const imgBg = ctx.createLinearGradient(imgX, imgY, imgX + imgSize, imgY + imgSize)
+  imgBg.addColorStop(0, '#FEFCFA')
+  imgBg.addColorStop(1, '#F8EFEA')
+  ctx.fillStyle = imgBg
+  ctx.fillRect(imgX, imgY, imgSize, imgSize)
   if (imagen) {
-    const imgSize = 700
-    const imgX    = (W - imgSize) / 2
-    const imgY    = 235
-
-    ctx.shadowColor   = 'rgba(0,0,0,0.12)'
-    ctx.shadowBlur    = 35
-    ctx.shadowOffsetY = 15
-
-    ctx.fillStyle = '#FFFFFF'
-    roundRect(ctx, imgX - 20, imgY - 20, imgSize + 40, imgSize + 40, 40)
-    ctx.fill()
-
-    ctx.shadowColor   = 'transparent'
-    ctx.shadowBlur    = 0
-    ctx.shadowOffsetY = 0
-
-    ctx.save()
-    roundRect(ctx, imgX, imgY, imgSize, imgSize, 30)
-    ctx.clip()
-
     const escala = Math.min(imgSize / imagen.naturalWidth, imgSize / imagen.naturalHeight)
     const dw = imagen.naturalWidth  * escala
     const dh = imagen.naturalHeight * escala
     ctx.drawImage(imagen, imgX + (imgSize - dw) / 2, imgY + (imgSize - dh) / 2, dw, dh)
-    ctx.restore()
   }
+  ctx.restore()
 
   // ── Zona de info ───────────────────────────────────────────────────
-  // Empieza en 975 para el separador, deja suficiente espacio hasta el badge (1500)
-  let cy = 975
+  const BADGE_Y  = 1482
+  let cy = imgY + imgSize + 42   // ~1062
 
+  // Separador
+  const sepW = 100
   ctx.fillStyle = '#F5821F'
-  ctx.fillRect(W / 2 - 60, cy, 120, 5)
-  cy += 60
+  ctx.fillRect(W / 2 - sepW / 2, cy, sepW, 5)
+  cy += 50
 
-  if (producto.etiqueta) {
-    ctx.fillStyle = '#F5821F'
-    ctx.font = 'bold 34px Arial, sans-serif'
+  // Categoría
+  if (producto.categoria) {
+    ctx.font = '27px Arial, sans-serif'
+    ctx.fillStyle = '#A07050'
     ctx.textAlign = 'center'
-    ctx.fillText(`✦ ${producto.etiqueta.toUpperCase()} ✦`, W / 2, cy)
-    cy += 72
+    ctx.letterSpacing = '3px'
+    ctx.fillText(producto.categoria.toUpperCase(), W / 2, cy)
+    ctx.letterSpacing = '0px'
+    cy += 50
   }
 
-  ctx.fillStyle = '#1C1208'
-  ctx.font = 'bold 64px Georgia, serif'
-  ctx.textAlign = 'center'
-  cy = wrapText(ctx, producto.nombre, W / 2, cy, W - 120, 76)
-  cy += 110   // deja espacio para la ascent del precio (88px)
+  // Etiqueta (Nuevo / Últimas unidades)
+  if (producto.etiqueta) {
+    ctx.font = 'bold 30px Arial, sans-serif'
+    ctx.fillStyle = '#F5821F'
+    ctx.textAlign = 'center'
+    ctx.fillText(`✦  ${producto.etiqueta.toUpperCase()}  ✦`, W / 2, cy)
+    cy += 52
+  }
 
-  ctx.font = 'bold 88px Georgia, serif'
+  // Nombre del producto
+  ctx.fillStyle = '#1C1208'
+  ctx.font = 'bold 68px Georgia, serif'
+  ctx.textAlign = 'center'
+  cy = wrapText(ctx, producto.nombre, W / 2, cy, W - 110, 78)
+  cy += 42
+
+  // Precio con tarjeta
+  ctx.font = 'bold 90px Georgia, serif'
   ctx.fillStyle = '#F5821F'
   ctx.textAlign = 'center'
   ctx.fillText(formatPrecio(producto.precio), W / 2, cy)
-  cy += 110
+  cy += 34
 
-  if (producto.talles?.length > 0) {
-    ctx.font = '30px Arial, sans-serif'
-    ctx.fillStyle = '#6B5B4E'
+  ctx.font = '26px Arial, sans-serif'
+  ctx.fillStyle = '#C09878'
+  ctx.fillText('con tarjeta', W / 2, cy)
+  cy += 52
+
+  // Línea divisora suave
+  ctx.strokeStyle = 'rgba(245,130,31,0.2)'
+  ctx.lineWidth = 1.5
+  ctx.beginPath()
+  ctx.moveTo(W / 2 - 200, cy); ctx.lineTo(W / 2 + 200, cy)
+  ctx.stroke()
+  cy += 40
+
+  // Precio efectivo / transferencia
+  const precioEfectivo = Math.round(producto.precio * 0.85)
+  ctx.font = 'bold 66px Georgia, serif'
+  ctx.fillStyle = '#1B7A3E'
+  ctx.textAlign = 'center'
+  ctx.fillText(formatPrecio(precioEfectivo), W / 2, cy)
+  cy += 34
+
+  ctx.font = '26px Arial, sans-serif'
+  ctx.fillStyle = '#2A9E55'
+  ctx.fillText('efectivo  /  transferencia  (−15%)', W / 2, cy)
+  cy += 48
+
+  // Talles disponibles (desde stock real)
+  const tallesDisponibles = (producto.talles?.length > 0)
+    ? producto.talles
+    : (producto.stock || [])
+        .filter(s => s.cantidad > 0)
+        .sort((a, b) => a.talle.localeCompare(b.talle, undefined, { numeric: true }))
+        .map(s => s.talle)
+
+  if (tallesDisponibles.length > 0 && cy + 90 < BADGE_Y - 20) {
+    ctx.font = '25px Arial, sans-serif'
+    ctx.fillStyle = '#9B8070'
     ctx.textAlign = 'center'
     ctx.fillText('TALLES DISPONIBLES', W / 2, cy)
-    cy += 60
-    ctx.font = 'bold 42px Arial, sans-serif'
-    ctx.fillStyle = '#1C1208'
-    ctx.fillText(producto.talles.join('  ·  '), W / 2, cy)
+    cy += 45
+    ctx.font = 'bold 38px Arial, sans-serif'
+    ctx.fillStyle = '#3C2010'
+    ctx.fillText(tallesDisponibles.slice(0, 9).join('  ·  '), W / 2, cy)
   }
 
   // ── Badge descuento ────────────────────────────────────────────────
-  // Siempre fijo en Y=1505, separado de la banda (que empieza en 1635)
-  const badgeH = 118
+  const badgeH = 122
   const badgeW = 870
-  const badgeY = 1505
   const badgeX = (W - badgeW) / 2
 
+  ctx.shadowColor   = 'rgba(27,140,78,0.28)'
+  ctx.shadowBlur    = 22
+  ctx.shadowOffsetY = 8
   ctx.fillStyle = '#1B8C4E'
-  roundRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2)
+  roundRect(ctx, badgeX, BADGE_Y, badgeW, badgeH, badgeH / 2)
   ctx.fill()
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0
 
-  // Línea decorativa interna
-  ctx.strokeStyle = 'rgba(255,255,255,0.25)'
+  ctx.strokeStyle = 'rgba(255,255,255,0.22)'
   ctx.lineWidth = 2
-  roundRect(ctx, badgeX + 6, badgeY + 6, badgeW - 12, badgeH - 12, (badgeH - 12) / 2)
+  roundRect(ctx, badgeX + 7, BADGE_Y + 7, badgeW - 14, badgeH - 14, (badgeH - 14) / 2)
   ctx.stroke()
 
   ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 40px Arial, sans-serif'
+  ctx.font = 'bold 42px Arial, sans-serif'
   ctx.textAlign = 'center'
-  ctx.fillText('15% DESCUENTO', W / 2, badgeY + 52)
+  ctx.fillText('15% DESCUENTO', W / 2, BADGE_Y + 55)
   ctx.font = '28px Arial, sans-serif'
   ctx.fillStyle = '#C8F7DC'
-  ctx.fillText('EFECTIVO  /  TRANSFERENCIA', W / 2, badgeY + 93)
+  ctx.fillText('EFECTIVO  /  TRANSFERENCIA', W / 2, BADGE_Y + 97)
 
   // ── Banda inferior ─────────────────────────────────────────────────
-  const bandaY = 1640
-  const botGrad = ctx.createLinearGradient(0, bandaY, W, H)
+  const bandaY = 1642
+  const botGrad = ctx.createLinearGradient(0, bandaY, 0, H)
   botGrad.addColorStop(0, '#C4610A')
   botGrad.addColorStop(1, '#F5821F')
   ctx.fillStyle = botGrad
   ctx.fillRect(0, bandaY, W, H - bandaY)
 
-  ctx.fillStyle = '#FFFFFF'
-  ctx.font = 'bold 50px Arial, sans-serif'
-  ctx.textAlign = 'center'
-  ctx.fillText('Consultá por WhatsApp 👇', W / 2, bandaY + 112)
+  // Patrón decorativo translúcido
+  ctx.fillStyle = 'rgba(255,255,255,0.05)'
+  for (let i = 0; i < 9; i++) {
+    ctx.beginPath()
+    ctx.arc(120 * i, bandaY + 140, 90, 0, Math.PI * 2)
+    ctx.fill()
+  }
 
-  ctx.font = '36px Arial, sans-serif'
-  ctx.fillStyle = '#FFE4C4'
-  ctx.fillText('375 446-0575', W / 2, bandaY + 186)
+  ctx.fillStyle = '#FFFFFF'
+  ctx.font = 'bold 52px Arial, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.fillText('Consultá por WhatsApp 👇', W / 2, bandaY + 120)
+
+  ctx.font = '38px Arial, sans-serif'
+  ctx.fillStyle = '#FFE8D0'
+  ctx.fillText('375 446-0575', W / 2, bandaY + 192)
+
+  ctx.font = '24px Arial, sans-serif'
+  ctx.fillStyle = 'rgba(255,235,210,0.55)'
+  ctx.fillText('fanaticadelcalzado.com.ar', W / 2, bandaY + 244)
 }
 
 export default function StoryGenerator({ producto, onCerrar }) {
@@ -246,7 +321,7 @@ export default function StoryGenerator({ producto, onCerrar }) {
       link.href = canvasRef.current.toDataURL('image/png')
       link.click()
     } catch {
-      alert('No se pudo descargar: el servidor de imágenes bloqueó el acceso. Probá clic derecho → Guardar imagen en el canvas.')
+      alert('No se pudo descargar. Probá clic derecho → Guardar imagen en el canvas.')
     }
   }
 
@@ -267,7 +342,6 @@ export default function StoryGenerator({ producto, onCerrar }) {
           </button>
         </div>
 
-        {/* Preview del canvas escalado */}
         <div className="relative">
           {generando && (
             <div className="absolute inset-0 flex items-center justify-center bg-cream rounded-xl z-10">
@@ -283,12 +357,10 @@ export default function StoryGenerator({ producto, onCerrar }) {
           />
         </div>
 
-        {error && (
-          <p className="font-inter text-xs text-red-500 text-center">{error}</p>
-        )}
+        {error && <p className="font-inter text-xs text-red-500 text-center">{error}</p>}
 
         <p className="font-inter text-xs text-stone-400 text-center -mt-1">
-          Preview. La imagen descargada es 1080×1920px.
+          Preview · La imagen descargada es 1080×1920px
         </p>
 
         <button
