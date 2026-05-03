@@ -581,9 +581,25 @@ export default function Productos() {
     setModalAbierto(true)
   }
 
+  const codigoTrimmed = form.codigo?.trim()
+  const productoConMismoCodigo = codigoTrimmed
+    ? productos.find(p =>
+        p.codigo?.trim().toLowerCase() === codigoTrimmed.toLowerCase() &&
+        p.id !== productoEditando?.id
+      )
+    : null
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.nombre || !form.precio) { toast.error('Nombre y precio son obligatorios'); return }
+
+    if (productoConMismoCodigo && !productoEditando) {
+      const confirmar = window.confirm(
+        `⚠️ El código "${codigoTrimmed}" ya está usado por "${productoConMismoCodigo.nombre}".\n\n¿Querés guardarlo igual con el mismo código?`
+      )
+      if (!confirmar) return
+    }
+
     setGuardando(true)
     const datos = {
       nombre: form.nombre,
@@ -844,9 +860,17 @@ export default function Productos() {
                     Código
                     <span className="text-stone-400 font-normal ml-1 text-xs">(opcional)</span>
                   </label>
-                  <input className="input-base" value={form.codigo}
+                  <input
+                    className={`input-base ${productoConMismoCodigo ? 'border-amber-400 focus:ring-amber-400' : ''}`}
+                    value={form.codigo}
                     onChange={e => setForm(f => ({...f, codigo: e.target.value}))}
-                    placeholder="Ej: Y1526" />
+                    placeholder="Ej: Y1526"
+                  />
+                  {productoConMismoCodigo && (
+                    <p className="font-inter text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      ⚠️ Ya usado por <span className="font-semibold">{productoConMismoCodigo.nombre}</span>
+                    </p>
+                  )}
                 </div>
               </div>
 
