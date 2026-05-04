@@ -543,6 +543,35 @@ export default function Productos() {
     setRegistrandoVenta(false)
   }
 
+  const exportarCSV = () => {
+    const filas = [
+      ['Código', 'Nombre', 'Categoría', 'Precio', 'Etiqueta', 'Estado', 'Talles disponibles', 'Stock total'],
+      ...productosFiltrados.map(p => {
+        const stock = p.stock || []
+        const tallesDisp = stock.filter(s => s.cantidad > 0).map(s => s.talle).join(' / ')
+        const totalStock = stock.reduce((sum, s) => sum + (s.cantidad || 0), 0)
+        return [
+          p.codigo || '',
+          p.nombre || '',
+          p.categoria || '',
+          p.precio || 0,
+          p.etiqueta || '',
+          p.activo ? 'Activo' : 'Inactivo',
+          tallesDisp,
+          totalStock,
+        ]
+      })
+    ]
+    const csv = filas.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `productos-fanatica-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   const UN_ANIO_MS = 365 * 24 * 60 * 60 * 1000
   const esViejo = (p) => {
     if (!p.created_at) return false
@@ -733,6 +762,17 @@ export default function Productos() {
               </button>
             )}
           </div>
+          <button onClick={exportarCSV} title="Exportar a Excel"
+            className="flex items-center gap-1.5 font-inter text-sm px-3 py-2 rounded-lg border border-border text-stone-600 hover:border-green-500 hover:text-green-700 transition-all whitespace-nowrap">
+            <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+            Exportar
+          </button>
           <button onClick={abrirNuevo} className="btn-orange text-sm whitespace-nowrap">+ Nuevo producto</button>
         </div>
       </div>
