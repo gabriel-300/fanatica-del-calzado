@@ -24,17 +24,20 @@ export default function AdminVentas() {
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
   const [metodoFiltro, setMetodoFiltro] = useState('todos')
+  const [busqueda, setBusqueda] = useState('')
   const [confirmEliminar, setConfirmEliminar] = useState(null)
 
   const ventasFiltradas = useMemo(() => {
+    const q = busqueda.trim().toLowerCase()
     return ventas.filter(v => {
       const fecha = new Date(v.created_at)
       if (desde && fecha < new Date(desde)) return false
       if (hasta && fecha > new Date(hasta + 'T23:59:59')) return false
       if (metodoFiltro !== 'todos' && v.metodo_pago !== metodoFiltro) return false
+      if (q && !v.producto_nombre?.toLowerCase().includes(q)) return false
       return true
     })
-  }, [ventas, desde, hasta, metodoFiltro])
+  }, [ventas, desde, hasta, metodoFiltro, busqueda])
 
   const totales = useMemo(() => {
     const t = { tarjeta: 0, efectivo: 0, transferencia: 0, total: 0, cantidad: 0 }
@@ -76,6 +79,27 @@ export default function AdminVentas() {
 
       {/* Filtros */}
       <div className="bg-white rounded-2xl shadow-sm p-4 mb-4 flex flex-wrap items-center gap-3">
+        {/* Búsqueda */}
+        <div className="relative flex-1 min-w-[180px]">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <circle cx="6" cy="6" r="5"/><line x1="11" y1="11" x2="9" y2="9"/>
+          </svg>
+          <input
+            type="text"
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            placeholder="Buscar producto..."
+            className="input-base text-sm py-1.5 pl-8 w-full"
+          />
+          {busqueda && (
+            <button onClick={() => setBusqueda('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-500">
+              <svg width="13" height="13" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                <line x1="11" y1="1" x2="1" y2="11"/><line x1="1" y1="1" x2="11" y2="11"/>
+              </svg>
+            </button>
+          )}
+        </div>
+
         <div className="flex items-center gap-2">
           <label className="font-inter text-xs text-stone-400">Desde</label>
           <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
@@ -99,8 +123,8 @@ export default function AdminVentas() {
             </button>
           ))}
         </div>
-        {(desde || hasta || metodoFiltro !== 'todos') && (
-          <button onClick={() => { setDesde(''); setHasta(''); setMetodoFiltro('todos') }}
+        {(desde || hasta || metodoFiltro !== 'todos' || busqueda) && (
+          <button onClick={() => { setDesde(''); setHasta(''); setMetodoFiltro('todos'); setBusqueda('') }}
             className="font-inter text-xs text-stone-400 hover:text-stone-700 transition-colors ml-auto">
             Limpiar filtros
           </button>
